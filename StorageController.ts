@@ -130,6 +130,7 @@ async function writeJson (repo: any, repoPath: string, readPath: string, data: a
 
 interface StorageControllerOptions extends BaseEventControllerOptions {
     url: string
+    localCachePath?: string
 }
 
 class StorageController extends BaseEventController {
@@ -147,7 +148,7 @@ class StorageController extends BaseEventController {
 
         this.url = options.url
         this.syncInterval = SYNC_INTERVAL
-        this.repoPath = '.storage.tmp'
+        this.repoPath = options.localCachePath || '.storage.tmp'
     }
 
     async init (app: Express): Promise<void> {
