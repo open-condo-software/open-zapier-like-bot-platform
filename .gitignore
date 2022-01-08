@@ -1,4 +1,4 @@
 node_modules
 package-lock.json
 ignore.*
-*.log.txt*
+*.log*
