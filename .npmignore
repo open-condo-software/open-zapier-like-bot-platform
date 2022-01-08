@@ -1,0 +1,4 @@
+ignore.*
+*.log*
+_s
+.storage*
