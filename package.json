@@ -18,9 +18,9 @@
     "@types/jest": "*",
     "babel-jest": "*",
     "jest": "*",
-    "ts-jest": "^27.1.2",
-    "ts-node": "^9.0.0",
-    "typescript": "^4.0.3"
+    "ts-jest": "27.1.2",
+    "ts-node": "9.1.1",
+    "typescript": "4.5.4"
   },
   "dependencies": {
     "@octokit/core": "^3.5.1",
