@@ -56,11 +56,7 @@ class EventStorageController extends BaseEventController {
                         this.onEventSendIndex = this.memoryEventIndex
                         this.onEventSendTimeoutHandler = null
                         const text = newEvents
-                            .map(({
-                                      id: eventId,
-                                      controller,
-                                      when,
-                                  }) => `\`${controller}\`:\`${when}\`:[${eventId}](${this.serverUrl}/_event/${controller}/${when}/${eventId})`)
+                            .map(({ id: eventId, controller, when }) => `\`${controller}\`:\`${when}\`:[${eventId}](${this.serverUrl}/_event/${controller}/${when}/${eventId})`)
                             .join('\n')
 
                         try {

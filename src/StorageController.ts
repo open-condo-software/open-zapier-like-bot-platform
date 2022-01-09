@@ -4,7 +4,6 @@ import child_process from 'child_process'
 import { Express } from 'express'
 import fs from 'fs'
 import { isArray, isMatch } from 'lodash'
-import { Clone, Repository } from 'nodegit'
 import path from 'path'
 import { serializeError } from 'serialize-error'
 import util from 'util'
@@ -35,27 +34,26 @@ async function run (command): Promise<string> {
 
 async function cloneRepo (repoUrl: string, repoPath: string) {
     if (DEBUG) console.log('cloneRepo()', repoUrl, repoPath)
+    const repo = { repoUrl, repoPath }
     if (!fs.existsSync(repoPath)) {
         if (DEBUG) console.log(`cloneRepo() clone ${repoUrl} ${repoPath}`)
-        await Clone.clone(repoUrl, repoPath)
+        await run(`git clone '${repoUrl}' '${repoPath}'`)
     }
-    const repo = await Repository.open(repoPath)
-    // await repo.fetchAll()
     await syncRepo(repo, repoPath)
     return repo
 }
 
 async function syncRepo (repo: any, repoPath: string) {
-    await run(`git -C ${repoPath} pull origin master && git -C ${repoPath} push origin master`)
+    await run(`git -C '${repoPath}' pull origin master && git -C '${repoPath}' push origin master`)
 }
 
 async function commitFile (repo: any, repoPath: string, filename: string, meta: any = {}) {
     const release = await commitMutex.acquire()
     try {
-        await run(`git -C ${repoPath} add ${filename}`)
-        const stdout = await run(`git -C ${repoPath} status -s`)
+        await run(`git -C '${repoPath}' add '${filename}'`)
+        const stdout = await run(`git -C '${repoPath}' status -s`)
         if (stdout.trim()) {
-            await run(`git -C ${repoPath} commit -am "${meta.message || 'commitFile()'}"`)
+            await run(`git -C '${repoPath}' commit -am '${meta.message.replace(/[\\']+/g, '') || 'commitFile()'}'`)
         }
     } finally {
         release()

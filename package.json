@@ -1,6 +1,6 @@
 {
   "name": "ozyifttt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": false,
   "repository": "https://github.com/open-condo-software/open-zapier-like-bot-platform",
   "author": "https://github.com/pahaz",
@@ -26,6 +26,7 @@
     "@octokit/core": "^3.5.1",
     "@octokit/webhooks": "^9.21.0",
     "@octokit/webhooks-types": "^5.1.0",
+    "@types/cors": "^2.8.12",
     "@types/express": "^4.17.11",
     "@types/jira-client": "^7.1.2",
     "@types/lodash": "^4.14.178",
@@ -35,8 +36,10 @@
     "@types/nunjucks": "^3.2.1",
     "@types/pino": "^7.0.5",
     "@types/pino-pretty": "^4.7.4",
+    "@types/serialize-error": "^4.0.1",
     "@types/write-file-atomic": "^3.0.3",
     "async-mutex": "^0.3.2",
+    "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "ensure-error": "^4.0.0",
     "express": "^4.17.1",
@@ -49,6 +52,7 @@
     "pino": "^7.6.1",
     "pino-http": "^6.5.0",
     "pino-pretty": "^7.3.0",
+    "serialize-error": "8.x",
     "write-file-atomic": "^3.0.3"
   }
 }

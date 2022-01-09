@@ -5,6 +5,7 @@ const EventEmitter = require('events')
 
 interface BaseEventControllerOptions {
     serverUrl: string
+    ignore?: (name: string, data: any) => boolean
     [key: string]: any
 }
 
@@ -12,10 +13,12 @@ abstract class BaseEventController {
     public readonly name: string = 'undefined'
     protected readonly serverUrl: string
     private readonly emitter: typeof EventEmitter
+    private readonly ignore: (name: string, data: any) => boolean
 
     protected constructor (options: BaseEventControllerOptions) {
         this.emitter = new EventEmitter()
         this.serverUrl = options.serverUrl
+        this.ignore = options.ignore
     }
 
     public abstract init (app: Express): Promise<void>
@@ -34,6 +37,7 @@ abstract class BaseEventController {
         const id = crypto.randomBytes(20).toString('hex')
         const time = new Date().toISOString()
         const meta = { id, time, controller: this.name, when: name }
+        if (this.ignore && this.ignore(name, data)) return
         this.emitter.emit(name, data, meta)
         this.emitter.emit('any', { ...meta, data }, meta)
     }
