@@ -5,3 +5,5 @@ ignore.*
 _s
 .storage*
 dist
+.env
+*.lock

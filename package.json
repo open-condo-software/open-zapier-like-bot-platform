@@ -8,7 +8,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "prepublish": "tsc",
+    "build": "tsc",
     "test": "jest"
   },
   "devDependencies": {
@@ -37,6 +37,7 @@
     "@types/pino-pretty": "^4.7.4",
     "@types/write-file-atomic": "^3.0.3",
     "async-mutex": "^0.3.2",
+    "dotenv": "^10.0.0",
     "ensure-error": "^4.0.0",
     "express": "^4.17.1",
     "jira-client": "^6.22.0",
