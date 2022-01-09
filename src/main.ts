@@ -11,7 +11,7 @@ import { BaseEventController } from './BaseEventController'
 import { logger } from './logger'
 
 type DoArray =
-    { controller: 'telegram', action: 'sendMessage', args: { chatId: string, text: string } }
+    { controller: 'telegram', action: 'sendMessage', args: { chatId: string, text: string, mode?: 'HTML' | 'MarkdownV2' | 'Markdown' } }
     | { controller: 'telegram', action: 'sendSticker', args: { chatId: string, sticker: string } }
     | { controller: 'telegram', action: 'readFile', args: { fileId: string, encoding?: string } }
     | { controller: 'storage', action: 'create', args: { table: string, object: any } }

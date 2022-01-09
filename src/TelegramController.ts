@@ -2,7 +2,7 @@ import assert from 'assert'
 import * as crypto from 'crypto'
 import { Express } from 'express'
 import fetch from 'node-fetch'
-import TelegramBot, { Message } from 'node-telegram-bot-api'
+import TelegramBot, { Message, ParseMode } from 'node-telegram-bot-api'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
@@ -63,18 +63,18 @@ class TelegramController extends BaseEventController {
         })
     }
 
-    async action (name: string, args: { chatId: string | number, text: string, sticker: string, fileId: string, encoding?: string }): Promise<Message | any> {
+    async action (name: string, args: { chatId: string | number, text: string, sticker: string, fileId: string, encoding?: string, mode?: ParseMode }): Promise<Message | any> {
         logger.debug({ controller: this.name, action: name, args })
         if (name === 'sendMessage') {
             if (args.text.length > 4096) {
                 const chunks = chunkString(args.text, 4050)
                 for (const index in chunks) {
                     const message = `CH[${index}]:\`${chunks[index].replace(/[`]/g, '')}\``
-                    await this.bot.sendMessage(args.chatId, message, { parse_mode: 'MarkdownV2' })
+                    await this.bot.sendMessage(args.chatId, message, { parse_mode: args.mode })
                 }
                 return
             }
-            return await this.bot.sendMessage(args.chatId, args.text, { parse_mode: 'MarkdownV2' })
+            return await this.bot.sendMessage(args.chatId, args.text, { parse_mode: args.mode })
         } else if (name === 'sendSticker') {
             return await this.bot.sendSticker(args.chatId, args.sticker)
         } else if (name === 'readFile') {

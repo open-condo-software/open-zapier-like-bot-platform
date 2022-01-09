@@ -56,13 +56,14 @@ class EventStorageController extends BaseEventController {
                         this.onEventSendIndex = this.memoryEventIndex
                         this.onEventSendTimeoutHandler = null
                         const text = newEvents
-                            .map(({ id: eventId, controller, when }) => `\`${controller}\`:\`${when}\`:[${eventId}](${this.serverUrl}/_event/${controller}/${when}/${eventId})`)
+                            .map(({ id: eventId, controller, when }) => `<code>${controller}</code>:<code>${when}</code>:<a href="${this.serverUrl}/_event/${controller}/${when}/${eventId}">${eventId}</a>`)
                             .join('\n')
 
                         try {
                             await this.telegram.action('sendMessage', {
                                 chatId: this.onEventSendToTelegramChatId,
                                 text,
+                                mode: 'HTML',
                             })
                         } catch (error) {
                             logger.error({
