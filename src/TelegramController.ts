@@ -70,11 +70,11 @@ class TelegramController extends BaseEventController {
                 const chunks = chunkString(args.text, 4050)
                 for (const index in chunks) {
                     const message = `CH[${index}]:\`${chunks[index].replace(/[`]/g, '')}\``
-                    await this.bot.sendMessage(args.chatId, message, { parse_mode: 'Markdown' })
+                    await this.bot.sendMessage(args.chatId, message, { parse_mode: 'MarkdownV2' })
                 }
                 return
             }
-            return await this.bot.sendMessage(args.chatId, args.text, { parse_mode: 'Markdown' })
+            return await this.bot.sendMessage(args.chatId, args.text, { parse_mode: 'MarkdownV2' })
         } else if (name === 'sendSticker') {
             return await this.bot.sendSticker(args.chatId, args.sticker)
         } else if (name === 'readFile') {
