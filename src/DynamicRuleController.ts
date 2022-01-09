@@ -11,7 +11,7 @@ const logger = getLogger('rule')
 
 
 function validateNamespaceAndRules (namespace: string, ruleObjects: Rules) {
-    const namespaceValidator = /^\w+$/g
+    const namespaceValidator = /^[\w-_]+$/g
     assert.ok(namespaceValidator.test(namespace), 'namespace is not valid')
     assert.ok(isArray(ruleObjects), 'rules json is not an array')
 }
