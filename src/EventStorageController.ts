@@ -13,6 +13,8 @@ const logger = getLogger('event')
 interface EventStorageControllerOptions extends BaseEventControllerOptions {
     controllers: Array<BaseEventController>
     onEventSendToTelegramChatId: string
+    storageControllerName?: string
+    telegramControllerName?: string
 }
 
 class EventStorageController extends BaseEventController {
@@ -29,8 +31,10 @@ class EventStorageController extends BaseEventController {
 
     constructor (private options: EventStorageControllerOptions) {
         super(options)
-        this.telegram = options.controllers.find(x => x.name === 'telegram')
-        this.storage = options.controllers.find(x => x.name === 'storage')
+        const storageControllerName = options.storageControllerName || 'storage'
+        const telegramControllerName = options.telegramControllerName || 'telegram'
+        this.telegram = options.controllers.find(x => x.name === telegramControllerName)
+        this.storage = options.controllers.find(x => x.name === storageControllerName)
         this.controllers = fromPairs(options.controllers.map(c => [c.name, c]))
         assert.strictEqual(typeof this.telegram, 'object', 'EventStorage config error: no telegram!')
         assert.strictEqual(typeof this.storage, 'object', 'EventStorage config error: no storage!')
