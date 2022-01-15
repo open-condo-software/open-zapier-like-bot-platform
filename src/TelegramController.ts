@@ -1,5 +1,4 @@
 import assert from 'assert'
-import * as crypto from 'crypto'
 import { Express } from 'express'
 import fetch from 'node-fetch'
 import TelegramBot, { Message, ParseMode } from 'node-telegram-bot-api'
@@ -32,6 +31,7 @@ function loadBinary (url) {
 
 interface TelegramControllerOptions extends BaseEventControllerOptions {
     token: string
+    callbackUrl: string
 }
 
 class TelegramController extends BaseEventController {
@@ -45,17 +45,20 @@ class TelegramController extends BaseEventController {
 
         assert.strictEqual(typeof options.token, 'string', 'config error, require token!')
         this.token = options.token
-        this.callback = '/cb/' + crypto.randomBytes(20).toString('hex')
+        this.callback = options.callbackUrl
     }
 
     async init (app: Express): Promise<void> {
         this.bot = new TelegramBot(this.token)
-        this.bot.setWebHook(`${this.serverUrl}${this.callback}`)
 
-        app.post(this.callback, (req, res) => {
-            this.bot.processUpdate(req.body)
-            res.sendStatus(200)
-        })
+        if (this.callback) {
+            await this.bot.setWebHook(`${this.serverUrl}${this.callback}`)
+
+            app.post(this.callback, (req, res) => {
+                this.bot.processUpdate(req.body)
+                res.sendStatus(200)
+            })
+        }
 
         this.bot.on('message', (msg: Message) => {
             logger.debug({ controller: this.name, message: msg })
