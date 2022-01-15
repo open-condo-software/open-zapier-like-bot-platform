@@ -6,5 +6,13 @@ export * from './JiraController'
 export * from './StorageController'
 export * from './TelegramController'
 export * from './UtilsController'
+export * from './S3Controller'
 export * from './logger'
 export * from './main'
+
+export let __version__ = ''
+try {
+    __version__ = JSON.parse(require('fs').readFileSync(`${__dirname}/../package.json`)).version
+} catch (error) {
+    console.warn(error)
+}
