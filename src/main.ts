@@ -7,6 +7,7 @@ import httpLogger from 'pino-http'
 import { serializeError } from 'serialize-error'
 
 import { BaseEventController } from './BaseEventController'
+import { AbortActionError } from './errors'
 
 import { logger } from './logger'
 
@@ -20,6 +21,7 @@ type DoArray =
     | { controller: 'storage', action: 'update', args: { table: string, query: any, object: any } }
     | { controller: 'storage', action: 'delete', args: { table: string, query: any } }
     | { controller: 'utils', action: 'match', args: { pattern: string, text: string } }
+    | { controller: 'utils', action: 'abort', args: { case: string } }
 
 type RuleArray =
     { controller: 'telegram', when: 'message' }
@@ -194,21 +196,30 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
                                 set(event, doAs, result)
                             }
                         } catch (error) {
-                            logger.error({
-                                step: 'ERROR<-action:do()',
-                                error: serializeError(error),
-                                eventId, ruleId, ruleIndex, ruleControllerName, ruleWhen,
-                                doId, doIndex, doControllerName, doAction, doArgs, doAs,
-                            })
+                            if (error instanceof AbortActionError || error.message.startsWith('ABORT')) {
+                                logger.debug({ step: 'ABORT<-action:do()', eventId, ruleId, doId })
+                            } else {
+                                logger.error({
+                                    step: 'ERROR<-action:do()',
+                                    error: serializeError(error),
+                                    eventId, ruleId, ruleIndex, ruleControllerName, ruleWhen,
+                                    doId, doIndex, doControllerName, doAction, doArgs, doAs,
+                                })
+                            }
                             throw error
                         }
                     }
                 } catch (error) {
-                    logger.error({
-                        step: 'ERROR<-controller:on()',
-                        error: serializeError(error),
-                        eventId, ruleId, ruleIndex, ruleControllerName, ruleWhen,
-                    })
+                    if (error instanceof AbortActionError || error.message.startsWith('ABORT')) {
+                        logger.debug({ step: 'ABORT<-controller:on()', eventId, ruleId })
+                    } else {
+                        logger.error({
+                            step: 'ERROR<-controller:on()',
+                            error: serializeError(error),
+                            eventId, ruleId, ruleIndex, ruleControllerName, ruleWhen,
+                        })
+                    }
+                    throw error
                 }
             }
 
