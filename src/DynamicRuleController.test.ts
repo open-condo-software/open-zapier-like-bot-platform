@@ -10,7 +10,7 @@ test('DynamicRuleController.init()', async () => {
         serverUrl: 'https://localhost:3001',
         allowed: ['test'],
         controllers: [
-            new TelegramController({ serverUrl: 'https://localhost:3001', token: '' }),
+            new TelegramController({ serverUrl: 'https://localhost:3001', token: '', callbackUrl: '' }),
             new StorageController({ serverUrl: 'https://localhost:3001', url: '', localCachePath: 'ignore.test' }),
             new TestController({ serverUrl: 'https://localhost:3001' }),
         ],
