@@ -11,15 +11,17 @@ import { AbortActionError } from './errors'
 
 import { logger } from './logger'
 
+type StorageObject = Record<string, string>
+
 type DoArray =
     { controller: 'telegram', action: 'sendMessage', args: { chatId: string, text: string, mode?: 'HTML' | 'MarkdownV2' | 'Markdown' } }
     | { controller: 'telegram', action: 'sendSticker', args: { chatId: string, sticker: string } }
     | { controller: 'telegram', action: 'readFile', args: { fileId: string, encoding?: string } }
-    | { controller: 'storage', action: 'create', args: { table: string, object: any } }
-    | { controller: 'storage', action: 'createOrUpdate', args: { table: string, query: any, object: any } }
-    | { controller: 'storage', action: 'read', args: { table: string, query: any } }
-    | { controller: 'storage', action: 'update', args: { table: string, query: any, object: any } }
-    | { controller: 'storage', action: 'delete', args: { table: string, query: any } }
+    | { controller: 'storage', action: 'create', args: { table: string, object: StorageObject } }
+    | { controller: 'storage', action: 'createOrUpdate', args: { table: string, query: StorageObject, object: StorageObject } }
+    | { controller: 'storage', action: 'read', args: { table: string, query: StorageObject } }
+    | { controller: 'storage', action: 'update', args: { table: string, query: StorageObject, object: StorageObject } }
+    | { controller: 'storage', action: 'delete', args: { table: string, query: StorageObject } }
     | { controller: 'utils', action: 'match', args: { pattern: string, text: string } }
     | { controller: 'utils', action: 'abort', args: { case: string } }
 
