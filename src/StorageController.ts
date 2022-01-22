@@ -192,7 +192,7 @@ class StorageController extends BaseEventController {
         if (name === 'create') {
             const data = await readTable(this.repo, this.repoPath, args.table)
             data.push(args.object)
-            await writeTable(this.repo, this.repoPath, args.table, data)
+            await writeTable(this.repo, this.repoPath, args.table, data, (args._message) ? { message: args._message } : undefined)
             return args.object
         } else if (name === 'createOrUpdate') {
             const data = await readTable(this.repo, this.repoPath, args.table)
@@ -204,7 +204,7 @@ class StorageController extends BaseEventController {
                     Object.assign(obj, args.object)
                 }
             }
-            await writeTable(this.repo, this.repoPath, args.table, data)
+            await writeTable(this.repo, this.repoPath, args.table, data, (args._message) ? { message: args._message } : undefined)
             return filtered.length === 0 ? args.object : filtered
         } else if (name === 'read') {
             const data = await readTable(this.repo, this.repoPath, args.table)
@@ -216,7 +216,7 @@ class StorageController extends BaseEventController {
             for (const obj of filtered) {
                 Object.assign(obj, args.object)
             }
-            await writeTable(this.repo, this.repoPath, args.table, data)
+            await writeTable(this.repo, this.repoPath, args.table, data, (args._message) ? { message: args._message } : undefined)
             return filtered
         } else if (name === 'delete') {
             const data = await readTable(this.repo, this.repoPath, args.table)
