@@ -16,6 +16,7 @@ interface EventStorageControllerOptions extends BaseEventControllerOptions {
     onEventSendDelay?: number
     storageController: any
     telegramController: any
+    skip?: (event: any) => boolean,
 }
 
 class EventStorageController extends BaseEventController {
@@ -29,6 +30,7 @@ class EventStorageController extends BaseEventController {
     private onEventSendDelay: number
     private onEventSendIndex: number
     private onEventSendTimeoutHandler: NodeJS.Timeout
+    private skip: (event: any) => boolean
 
     constructor (private options: EventStorageControllerOptions) {
         super(options)
@@ -43,6 +45,7 @@ class EventStorageController extends BaseEventController {
         this.onEventSendIndex = 0
         this.onEventSendDelay = options.onEventSendDelay || 3000
         this.onEventSendToTelegramChatId = options.onEventSendToTelegramChatId
+        this.skip = options.skip
     }
 
     async init (app: Express): Promise<void> {
@@ -52,6 +55,10 @@ class EventStorageController extends BaseEventController {
             const controller = this.controllers[controllerName]
             controller.on('any', async (event) => {
                 const { id: eventId, controller, when } = event
+                if (this.skip && this.skip(event)) {
+                    logger.debug({ controller: this.name, step: 'SKIPPED', eventId, eventController: controller, eventWhen: when })
+                    return
+                }
                 this.memoryEvents[this.memoryEventIndex++ % MAX_MEMORY_EVENTS] = event
                 if (!this.onEventSendTimeoutHandler) {
                     const onEventSendMessage = async () => {
