@@ -1,17 +1,21 @@
-import express from 'express'
+import express, { Express } from 'express'
+import { BaseEventController } from './BaseEventController'
 import { UtilsController } from './UtilsController'
 
-test('UtilsController', async () => {
-    const app = express()
-    const controller = new UtilsController({ serverUrl: 'https://localhost:3001' })
+async function makeInitedUtilsController () {
+    const app: Express = express()
+    const controller: BaseEventController = new UtilsController({ serverUrl: 'https://localhost:3001' })
     await controller.init(app)
+    return controller
+}
+
+test('UtilsController', async () => {
+    const controller = await makeInitedUtilsController()
     expect(controller.name).toEqual('utils')
 })
 
 test('UtilsController match text', async () => {
-    const app = express()
-    const controller = new UtilsController({ serverUrl: 'https://localhost:3001' })
-    await controller.init(app)
+    const controller = await makeInitedUtilsController()
     const result1 = await controller.action('match', {
         pattern: '^(?<name>[a-z]+) (?<value>[0-9]+)$',
         text: 'some 123 some',
