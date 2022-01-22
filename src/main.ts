@@ -215,6 +215,7 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
                 } catch (error) {
                     if (error instanceof AbortActionError || error.message.startsWith('ABORT')) {
                         logger.debug({ step: 'ABORT<-controller:on()', eventId, ruleId })
+                        return
                     } else {
                         logger.error({
                             step: 'ERROR<-controller:on()',
