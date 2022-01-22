@@ -23,6 +23,10 @@ abstract class BaseEventController {
 
     public abstract init (app: Express): Promise<void>
 
+    public destroy (): Promise<any> {
+        return
+    }
+
     public abstract action (name: string, args: any): Promise<any>
 
     public on (name: string, listener: (data: any, meta?: any) => void): void {
