@@ -80,7 +80,7 @@ interface ServerlessControllerOptions extends BaseEventControllerOptions {
     overwriteServerlessYmlConfig?: Record<string, any>
     howToUpdateServerless: Rules
     controllers: Array<BaseEventController>
-    allowed: Array<string>
+    allowed?: Array<string>
 }
 
 class ServerlessController extends BaseEventController {
@@ -99,7 +99,7 @@ class ServerlessController extends BaseEventController {
         this.overwriteServerlessYmlConfig = options.overwriteServerlessYmlConfig || {}
         this.controllers = fromPairs(
             options.controllers
-                .filter(c => options.allowed.includes(c.name))
+                .filter(c => (options.allowed) ? options.allowed.includes(c.name) : true)
                 .map(c => [c.name, c]))
         assert.strictEqual(typeof this.telegram, 'object', 'ServerlessController config error: no telegram!')
         assert.strictEqual(typeof this.storage, 'object', 'ServerlessController config error: no storage!')

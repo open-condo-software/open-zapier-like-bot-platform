@@ -36,7 +36,7 @@ function validateNamespaceAndRules (namespace: string, ruleObjects: Rules) {
 interface RuleControllerOptions extends BaseEventControllerOptions {
     howToUpdateRule: Rules
     controllers: Array<BaseEventController>
-    allowed: Array<string>
+    allowed?: Array<string>
 }
 
 class RuleController extends BaseEventController {
@@ -53,7 +53,7 @@ class RuleController extends BaseEventController {
         this.storage = options.controllers.find(x => x.name === 'storage')
         this.controllers = fromPairs(
             options.controllers
-                .filter(c => options.allowed.includes(c.name))
+                .filter(c => (options.allowed) ? options.allowed.includes(c.name) : true)
                 .map(c => [c.name, c]))
         this.howToUpdateRule = options.howToUpdateRule
         assert.strictEqual(typeof this.telegram, 'object', 'RuleController config error: no telegram!')
