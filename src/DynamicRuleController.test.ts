@@ -76,3 +76,104 @@ test('DynamicRuleController validation controller', async () => {
     })
     expect(result).toEqual('AssertionError [ERR_ASSERTION]: rules: "controller" name should not starts with _')
 })
+
+test('DynamicRuleController rules', async () => {
+    const controller = await makeInitedDynamicRuleController()
+    const result = await controller.action('_updateRules', {
+        namespace: 'test',
+        rules: JSON.stringify([
+            {
+                'controller': 'github',
+                'when': 'check_run',
+                'case': '{{ action == "completed" and check_run.status == "completed" and sender.login == "pahaz" }}',
+                'do': [
+                    {
+                        'controller': 'telegram',
+                        'action': 'sendMessage',
+                        'args': {
+                            'chatId': '-144812829',
+                            'text': '<b><u>{{ check_run.name | escape }}</u></b>: <code>{{ check_run.conclusion }}</code>\n<a href="{{ check_run.html_url }}">{{ repository.full_name }}/run/{{ check_run.id }}</a> (<pre>{{ check_run.check_suite.head_branch | escape }}</pre>)\nby <a href="{{ sender.html_url }}">{{ sender.login }}</a>',
+                            'mode': 'HTML',
+                        },
+                    },
+                ],
+            },
+            {
+                'controller': 'telegram',
+                'when': 'message',
+                'case': '{{ sticker.set_name == "Cat2O" and sticker.file_unique_id == "AgADQQADKA9qFA" }}',
+                'do': [
+                    {
+                        'controller': 'telegram',
+                        'action': 'sendSticker',
+                        'args': {
+                            'chatId': '{{ chat.id }}',
+                            'sticker': 'CAACAgIAAxkBAAIBA2HHn2i4ZT38s_hEy8cSBnddF0J4AAI1AAMoD2oUUlHZS3d3sAUjBA',
+                        },
+                    },
+                ],
+            },
+            {
+                'controller': 'telegram',
+                'when': 'message',
+                'case': '{{ r/(привет|что это|ты кто|что умеешь|как)/ig.test(text) and chat.type == "private" }}',
+                'do': [
+                    {
+                        'controller': 'telegram',
+                        'action': 'sendMessage',
+                        'args': {
+                            'chatId': '{{ chat.id }}',
+                            'text': 'Я БоТ! Короче, мне надо прислать `rules.json` файлик!',
+                            'mode': 'Markdown',
+                        },
+                    },
+                ],
+            },
+            {
+                'controller': 'telegram',
+                'when': 'message',
+                'case': '{{ new_chat_participant.username === "DevBot" or group_chat_created }}',
+                'do': [
+                    {
+                        'controller': 'telegram',
+                        'action': 'sendMessage',
+                        'args': {
+                            'chatId': '{{ chat.id }}',
+                            'text': 'Привет! Я программируемый бот!',
+                        },
+                    },
+                ],
+            },
+            {
+                'controller': 'telegram',
+                'when': 'message',
+                'case': '{{ r/^(скажи|подскажи|какой)?.*(chatId|чатид|чат ид|ид чата)/ig.test(text) }}',
+                'do': [
+                    {
+                        'controller': 'telegram',
+                        'action': 'sendMessage',
+                        'args': {
+                            'chatId': '{{ chat.id }}',
+                            'text': 'Если что, <pre>chatId</pre> этого чатика <code>{{ chat.id }}</code>',
+                            'mode': 'HTML',
+                        },
+                    },
+                ],
+            },
+            {
+                'controller': 'scheduler',
+                'when': '* * * * *',
+                'do': [
+                    {
+                        'controller': 'telegram',
+                        'action': 'sendMessage',
+                        'args': {
+                            'chatId': '-744812727',
+                            'text': 'БДИ!',
+                        },
+                    },
+                ],
+            },
+        ]),
+    })
+})

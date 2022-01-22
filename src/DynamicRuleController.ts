@@ -24,7 +24,7 @@ function validateNamespaceAndRules (namespace: string, ruleObjects: Rules) {
         for (const does of rule.do) {
             assert.ok(!does.controller.startsWith('_'), 'rules: "do"."controller" name should not starts with _')
             assert.ok(!does.action.startsWith('_'), 'rules: "do"."action" name should not starts with _')
-            assert.ok(!isObject(does.args), 'rules: "do"."args" is not an object')
+            assert.ok(isObject(does.args), 'rules: "do"."args" is not an object')
             toPairs(does.args).forEach(([key, val]) => {
                 assert.ok(typeof val === 'string', `rules: "do"."args" (${key}) value is not a string`)
                 assert.ok(!key.startsWith('_'), `rules: "do"."args" (${key}) should not starts with _`)
