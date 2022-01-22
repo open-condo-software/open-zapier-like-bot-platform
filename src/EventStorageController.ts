@@ -13,6 +13,7 @@ const logger = getLogger('event')
 interface EventStorageControllerOptions extends BaseEventControllerOptions {
     controllers: Array<BaseEventController>
     onEventSendToTelegramChatId: string
+    onEventSendDelay?: number
     storageController: any
     telegramController: any
 }
@@ -40,7 +41,7 @@ class EventStorageController extends BaseEventController {
         this.memoryEvents = new Array<any>(MAX_MEMORY_EVENTS)
         this.memoryEventIndex = 0
         this.onEventSendIndex = 0
-        this.onEventSendDelay = 3000
+        this.onEventSendDelay = options.onEventSendDelay || 3000
         this.onEventSendToTelegramChatId = options.onEventSendToTelegramChatId
     }
 
