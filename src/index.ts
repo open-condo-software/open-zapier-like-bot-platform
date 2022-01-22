@@ -7,6 +7,7 @@ export * from './StorageController'
 export * from './TelegramController'
 export * from './UtilsController'
 export * from './S3Controller'
+export * from './ServerlessController'
 export * from './logger'
 export * from './main'
 

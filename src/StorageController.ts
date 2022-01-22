@@ -109,6 +109,29 @@ async function getJsonPaths (repo: any, repoPath: string, readPath: string) {
     }
 }
 
+async function _copyFilesRecursively (fromPath: string, toPath: string) {
+    if (!fs.lstatSync(fromPath).isDirectory()) throw new Error('fromPath is not a directory')
+    if (!fs.existsSync(toPath)) await fs.promises.mkdir(toPath, { recursive: true })
+
+    const entries = await fs.promises.readdir(fromPath, { withFileTypes: true })
+    for (const entry of entries) {
+        entry.isDirectory() ?
+            await _copyFilesRecursively(path.join(fromPath, entry.name), path.join(toPath, entry.name)) :
+            await fs.promises.copyFile(path.join(fromPath, entry.name), path.join(toPath, entry.name))
+    }
+}
+
+async function copyFiles (repo: any, repoPath: string, toPath: string, fromPath: string, meta: any = {}) {
+    const release = await writeMutex.acquire()
+    try {
+        const destinationPath = path.join(repoPath, toPath)
+        await _copyFilesRecursively(fromPath, destinationPath)
+        await commitFile(repo, repoPath, toPath, meta)
+    } finally {
+        release()
+    }
+}
+
 async function writeJson (repo: any, repoPath: string, readPath: string, data: any, meta: any = {}) {
     const release = await writeMutex.acquire()
     try {
@@ -163,7 +186,7 @@ class StorageController extends BaseEventController {
         }, this.syncInterval)
     }
 
-    async action (name: string, args: { table: string, query?: { [key: string]: any }, object?: any, path: string, value: string, _message?: string }): Promise<any> {
+    async action (name: string, args: { table: string, query?: { [key: string]: any }, object?: any, path: string, fromPath: string, value: string, _message?: string }): Promise<any> {
         logger.debug({ controller: this.name, action: name, args })
         // TODO(pahaz): need to validate path and table for file path injections
         if (name === 'create') {
@@ -207,6 +230,11 @@ class StorageController extends BaseEventController {
         } else if (name === 'getJsonPaths') {
             if (!args.path) throw new Error('args.path is required')
             return await getJsonPaths(this.repo, this.repoPath, args.path)
+        } else if (name === '_copyFromLocalPath') {
+            if (!args.path) throw new Error('args.path is required')
+            if (!args.fromPath) throw new Error('args.fromPath is required')
+            await copyFiles(this.repo, this.repoPath, args.path, args.fromPath, (args._message) ? { message: args._message } : undefined)
+            return
         } else {
             throw new Error(`unknown action name: ${name}`)
         }

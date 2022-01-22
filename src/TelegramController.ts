@@ -1,7 +1,12 @@
 import assert from 'assert'
+import { randomBytes } from 'crypto'
 import { Express } from 'express'
+import * as fs from 'fs'
+import { realpathSync } from 'fs'
 import fetch from 'node-fetch'
 import TelegramBot, { Message, ParseMode } from 'node-telegram-bot-api'
+import { tmpdir } from 'os'
+import path from 'path'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
@@ -84,6 +89,12 @@ class TelegramController extends BaseEventController {
             const url = await this.bot.getFileLink(args.fileId)
             const buffer = await loadBinary(url)
             return buffer.toString(args.encoding || 'utf-8')
+        } else if (name === '_temporarilyDownloadFileLocally') {
+            const url = await this.bot.getFileLink(args.fileId)
+            const buffer = await loadBinary(url)
+            const tmp = path.join(realpathSync(tmpdir()), randomBytes(20).toString('hex'))
+            fs.writeFileSync(tmp, buffer)
+            return tmp
         } else {
             throw new Error(`unknown action name: ${name}`)
         }
