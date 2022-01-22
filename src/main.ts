@@ -38,6 +38,7 @@ type RuleArray =
     | { controller: 'jira', when: 'issue' }
     | { controller: 'jira', when: 'comment' }
     | { controller: 'jira', when: 'attachment' }
+    | { controller: 'scheduler', when: string }
     | { controller: 'test', when: 'message' }
 
 

@@ -8,6 +8,7 @@ export * from './TelegramController'
 export * from './UtilsController'
 export * from './S3Controller'
 export * from './ServerlessController'
+export * from './SchedulerController'
 export * from './logger'
 export * from './main'
 
