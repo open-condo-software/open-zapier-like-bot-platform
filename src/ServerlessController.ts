@@ -6,7 +6,7 @@ import { Express } from 'express'
 import * as fs from 'fs'
 import { mkdirSync, realpathSync } from 'fs'
 import { dump, load } from 'js-yaml'
-import { fromPairs, merge, trim } from 'lodash'
+import { merge } from 'lodash'
 import { tmpdir } from 'os'
 import path from 'path'
 import util from 'util'
@@ -14,8 +14,9 @@ import { open } from 'yauzl'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
-import { Rules, setupRules } from './main'
+import { asciiNormalizeName, shellQuote } from './utils'
 
+const STORAGE_SERVERLESS_PATH_PREFIX = 'serverless'
 const logger = getLogger('serverless')
 const exec = util.promisify(child_process.exec)
 const runMutex = new Mutex()
@@ -78,41 +79,23 @@ async function validateAndOverwriteServerlessYml (filepath: string, namespace: s
 
 interface ServerlessControllerOptions extends BaseEventControllerOptions {
     overwriteServerlessYmlConfig?: Record<string, any>
-    howToUpdateServerless: Rules
-    controllers: Array<BaseEventController>
-    allowed?: Array<string>
+    storageController: BaseEventController
 }
 
 class ServerlessController extends BaseEventController {
     name = '_serverless'
-    private controllers: Record<string, BaseEventController>
-    private telegram: BaseEventController
-    private storage: BaseEventController
-    private howToUpdateServerless: Rules
     private overwriteServerlessYmlConfig: Record<string, any>
+    private storage: BaseEventController
 
     constructor (options: ServerlessControllerOptions) {
         super(options)
-        this.howToUpdateServerless = options.howToUpdateServerless
-        this.telegram = options.controllers.find(x => x.name === 'telegram')
-        this.storage = options.controllers.find(x => x.name === 'storage')
         this.overwriteServerlessYmlConfig = options.overwriteServerlessYmlConfig || {}
-        this.controllers = fromPairs(
-            options.controllers
-                .filter(c => (options.allowed) ? options.allowed.includes(c.name) : true)
-                .map(c => [c.name, c]))
-        assert.strictEqual(typeof this.telegram, 'object', 'ServerlessController config error: no telegram!')
+        this.storage = options.storageController
         assert.strictEqual(typeof this.storage, 'object', 'ServerlessController config error: no storage!')
     }
 
     async init (app: Express): Promise<void> {
-        logger.debug({ controller: this.name, step: 'init()', controllers: Object.keys(this.controllers) })
-        await setupRules(this.howToUpdateServerless, {
-            ...this.controllers,
-            [this.name]: this,
-            telegram: this.telegram,
-            storage: this.storage,
-        })
+        return
     }
 
     async action (name: string, args: { namespace: string, service: string, archive: string, _message?: string }): Promise<any> {
@@ -120,22 +103,27 @@ class ServerlessController extends BaseEventController {
         if (name === '_deployServerless') {
             const release = await writeMutex.acquire()
             try {
-                const serverlessPrefix = await getServerlessYmlPrefixAndValidateArchiveFilenames(args.archive)
-                const namespaceName = trim(args.namespace.replace(/[_.-]+/g, '-'), '-').toLowerCase()
-                const serviceName = trim(args.service.replace(/[_.-]+/g, '-'), '-').toLowerCase()
+                const namespaceName = asciiNormalizeName(args.namespace)
+                const serviceName = asciiNormalizeName(args.service)
+                const archive = args.archive
+                const serverlessPrefix = await getServerlessYmlPrefixAndValidateArchiveFilenames(archive)
                 const service = `m-${namespaceName}--${serviceName}`
                 if (!/^[0-9a-zA-Z-]+$/g.test(serviceName)) throw new Error('wrong service name pattern allow only [0-9a-z-]')
                 if (!/^[0-9a-zA-Z-]+$/g.test(namespaceName)) throw new Error('wrong namespace name pattern allow only [0-9a-z-]')
                 const tmp = path.join(realpathSync(tmpdir()), randomBytes(20).toString('hex'))
                 const serverlessRoot = path.join(tmp, serverlessPrefix)
                 mkdirSync(tmp)
-                await run(`unzip '${args.archive}' -d '${tmp}'`)
+                await run(`unzip ${shellQuote(archive)} -d ${shellQuote(tmp)}`)
                 await validateAndOverwriteServerlessYml(path.join(serverlessRoot, 'serverless.yml'), namespaceName, {
                     ...this.overwriteServerlessYmlConfig,
                     service,
                 })
-                await this.storage.action('_copyFromLocalPath', { path: `serverless/${namespaceName}/${service}`, fromPath: serverlessRoot, _message: args._message })
-                return await run(`cd '${serverlessRoot}' && serverless deploy || echo "EXIT CODE ERROR: "$?`)
+                await this.storage.action('_copyFromLocalPath', {
+                    path: `${STORAGE_SERVERLESS_PATH_PREFIX}/${namespaceName}/${service}`,
+                    fromPath: serverlessRoot,
+                    _message: args._message,
+                })
+                return await run(`cd ${shellQuote(serverlessRoot)} && serverless deploy || echo "EXIT CODE ERROR: "$?`)
             } catch (error) {
                 return error.toString()
             } finally {
