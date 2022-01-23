@@ -33,6 +33,7 @@ type RuleArray =
     | { controller: 'github', when: 'repository' }
     | { controller: 'github', when: 'check_run' }
     | { controller: 'github', when: 'issue_comment' }
+    | { controller: 'github', when: 'pull_request_review' }
     | { controller: 'github', when: 'pull_request_review_comment' }
     | { controller: 'jira', when: 'issuelink' }
     | { controller: 'jira', when: 'issue' }
@@ -247,6 +248,7 @@ async function main (controllers: Array<BaseEventController>): Promise<Express> 
     const logReqRes = httpLogger({ logger, name: 'http', useLevel: 'debug' })
     const app = express()
     app.use(express.json())
+    app.use(express.urlencoded())
     app.use(cors())
     app.use(function reqIdAndLog (request, response, next) {
         request['id'] = request.headers['X-Request-Id'] = crypto.randomBytes(20).toString('hex')
