@@ -39,7 +39,7 @@ class EventStorageController extends BaseEventController {
         this.controllers = fromPairs(options.onEventControllers.map(c => [c.name, c]))
         assert.strictEqual(typeof this.telegram, 'object', 'EventStorage config error: no telegram!')
         assert.strictEqual(typeof this.storage, 'object', 'EventStorage config error: no storage!')
-        assert.ok(options.controllers.length > 0, 'EventStorage config error: no controllers!')
+        assert.ok(options.onEventControllers.length > 0, 'EventStorage config error: no controllers!')
         this.memoryEvents = new Array<any>(MAX_MEMORY_EVENTS)
         this.memoryEventIndex = 0
         this.onEventSendIndex = 0

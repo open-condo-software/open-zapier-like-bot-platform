@@ -68,8 +68,8 @@ class RuleController extends BaseEventController {
         logger.debug({ controller: this.name, step: 'action()', action: name, args })
         if (name === '_updateRules') {
             const release = await writeMutex.acquire()
+            const namespace = asciiNormalizeName(args.namespace)
             try {
-                const namespace = asciiNormalizeName(args.namespace)
                 // TODO(pahaz): need to normalize rules! For example, we can add some namespace prefix for storage paths!
                 const ruleObjects = JSON.parse(args.rules)
                 validateNamespaceAndRules(namespace, ruleObjects)
@@ -82,9 +82,15 @@ class RuleController extends BaseEventController {
                 })
                 const ruleIds: Array<string> = this.namespaces[namespace].map(x => x.ruleId)
                 ruleIds.sort()
-                return ruleIds.join('\n')
+                return {
+                    namespace,
+                    result: ruleIds.join('\n'),
+                }
             } catch (error) {
-                return error.toString()
+                return {
+                    namespace,
+                    error: error.toString(),
+                }
             } finally {
                 release()
             }

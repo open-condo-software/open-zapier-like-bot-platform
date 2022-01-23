@@ -169,6 +169,7 @@ class S3Controller extends BaseEventController {
     }
 
     async action (name: string, args: { table: string, query?: { [key: string]: any }, object?: any, path: string, value: string, _message?: string }): Promise<any> {
+        // TODO(pahaz): normalize table!
         logger.debug({ controller: this.name, action: name, args })
         // TODO(pahaz): need to validate path and table for file path injections
         if (name === 'create') {

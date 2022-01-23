@@ -1,7 +1,7 @@
 import cors from 'cors'
 import crypto from 'crypto'
 import express, { Express } from 'express'
-import { isArray, isEqual, isObject, map, mapValues, set } from 'lodash'
+import { identity, isArray, isEqual, isObject, map, mapValues, set } from 'lodash'
 import nunjucks, { Template } from 'nunjucks'
 import httpLogger from 'pino-http'
 import { serializeError } from 'serialize-error'
@@ -76,8 +76,7 @@ function nunjucksRecursiveRender (compiledTemplate: Record<string, any>, event: 
 }
 
 
-async function setupControllers (controllers: Array<BaseEventController>, app: express.Express) {
-    const c: { [key: string]: BaseEventController } = {}
+async function initControllers (controllers: Array<BaseEventController>, app: express.Express) {
     logger.debug({ step: 'setup:controllers', count: controllers.length })
     for (const controllerIndex in controllers) {
         const controller = controllers[controllerIndex]
@@ -85,9 +84,7 @@ async function setupControllers (controllers: Array<BaseEventController>, app: e
         try {
             controllerName = controller.name
             logger.debug({ step: 'setup:init(controller)', controllerName, controllerIndex })
-            if (typeof c[controller.name] !== 'undefined') throw new Error('controller name is already inited')
             await controller.init(app)
-            c[controller.name] = controller
             controller.on('any', (event) => {
                 const { id: eventId, controller, when, time, data } = event
                 logger.info({ step: 'controller:event()', eventId, controller, when, time })
@@ -102,7 +99,6 @@ async function setupControllers (controllers: Array<BaseEventController>, app: e
             throw error
         }
     }
-    return c
 }
 
 async function updateRules (rules: Rules, existing: RuleDisposers, c: { [key: string]: BaseEventController }): Promise<RuleDisposers> {
@@ -131,6 +127,7 @@ async function updateRules (rules: Rules, existing: RuleDisposers, c: { [key: st
 async function setupRules (rules: Rules, c: { [key: string]: BaseEventController }): Promise<RuleDisposers> {
     logger.debug({ step: 'setup:rules', count: rules.length })
     const result: RuleDisposers = []
+    rules = rules.filter(identity)
     for (const ruleIndex in rules) {
         const rule = rules[ruleIndex]
         const ruleId = crypto.randomBytes(20).toString('hex')
@@ -139,13 +136,13 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
             ruleControllerName = rule.controller
             ruleWhen = rule.when
             ruleCase = rule.case
-            ruleDo = rule.do
+            ruleDo = rule.do.filter(identity)
             logger.debug({
                 step: 'setup:create(rule)',
                 ruleId, ruleIndex, ruleControllerName, ruleWhen, ruleCase, ruleDo,
             })
             const controller = c[ruleControllerName]
-            if (!controller) throw new Error(`unknown rule.controller name: ${ruleControllerName}, allowed: ${Object.keys(c).join(', ')}`)
+            if (!controller) throw new Error(`unknown rule controller name: ${ruleControllerName}. Allowed: ${Object.keys(c).join(', ')}`)
             if (ruleCase && typeof ruleCase !== 'string') throw new Error('unknown rule.case type')
             if (ruleCase) {
                 // NOTE: try to compile before subscribe
@@ -179,7 +176,7 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
                         let doArgs
                         try {
                             const actionController = c[doControllerName]
-                            if (!actionController) throw new Error('unknown do action controller name')
+                            if (!actionController) throw new Error(`unknown do action controller name: ${actionController}. Allowed: ${Object.keys(c).join(', ')}`)
                             doArgs = nunjucksRecursiveRender(d.args, event)
                             logger.debug({
                                 step: 'action:do()',
@@ -246,7 +243,7 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
     return result
 }
 
-async function main (rules: Rules, controllers: Array<BaseEventController>): Promise<Express> {
+async function main (controllers: Array<BaseEventController>): Promise<Express> {
     const logReqRes = httpLogger({ logger, name: 'http', useLevel: 'debug' })
     const app = express()
     app.use(express.json())
@@ -258,8 +255,7 @@ async function main (rules: Rules, controllers: Array<BaseEventController>): Pro
         next()
     })
 
-    const c = await setupControllers(controllers, app)
-    await setupRules(rules, c)
+    await initControllers(controllers, app)
 
     return app
 }

@@ -33,8 +33,8 @@ test('ServerlessController _deployServerless test1', async () => {
         namespace: 'test1',
     })
     console.log(result1)
-    expect(result1).toContain('Packaging service')
-    expect(result1).toContain('Ensuring that deployment bucket exists')
+    expect(result1.result).toContain('Packaging service')
+    expect(result1.result).toContain('Ensuring that deployment bucket exists')
 })
 
 test('ServerlessController _deployServerless test2', async () => {
@@ -45,6 +45,6 @@ test('ServerlessController _deployServerless test2', async () => {
         namespace: 'test2',
     })
     console.log(result1)
-    expect(result1).toContain('Packaging service')
-    expect(result1).toContain('Ensuring that deployment bucket exists')
+    expect(result1.result).toContain('Packaging service')
+    expect(result1.result).toContain('Ensuring that deployment bucket exists')
 })

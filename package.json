@@ -1,6 +1,6 @@
 {
   "name": "ozyifttt",
-  "version": "1.3.0",
+  "version": "2.0.0",
   "private": false,
   "repository": "https://github.com/open-condo-software/open-zapier-like-bot-platform",
   "author": "https://github.com/pahaz",
@@ -61,6 +61,7 @@
     "pino-http": "^6.5.0",
     "pino-pretty": "^7.3.0",
     "serialize-error": "8.x",
+    "slugify": "^1.6.5",
     "write-file-atomic": "^3.0.3",
     "yauzl": "^2.10.0"
   }

@@ -102,30 +102,39 @@ class ServerlessController extends BaseEventController {
         logger.debug({ controller: this.name, step: 'action()', action: name, args })
         if (name === '_deployServerless') {
             const release = await writeMutex.acquire()
+            const namespace = asciiNormalizeName(args.namespace)
+            let service = asciiNormalizeName(args.service)
             try {
-                const namespaceName = asciiNormalizeName(args.namespace)
-                const serviceName = asciiNormalizeName(args.service)
                 const archive = args.archive
                 const serverlessPrefix = await getServerlessYmlPrefixAndValidateArchiveFilenames(archive)
-                const service = `m-${namespaceName}--${serviceName}`
-                if (!/^[0-9a-zA-Z-]+$/g.test(serviceName)) throw new Error('wrong service name pattern allow only [0-9a-z-]')
-                if (!/^[0-9a-zA-Z-]+$/g.test(namespaceName)) throw new Error('wrong namespace name pattern allow only [0-9a-z-]')
+                service = `m-${namespace}--${service}`
+                if (!/^[0-9a-zA-Z-]+$/g.test(service)) throw new Error('wrong service name pattern allow only [0-9a-z-]')
+                if (!/^[0-9a-zA-Z-]+$/g.test(namespace)) throw new Error('wrong namespace name pattern allow only [0-9a-z-]')
                 const tmp = path.join(realpathSync(tmpdir()), randomBytes(20).toString('hex'))
                 const serverlessRoot = path.join(tmp, serverlessPrefix)
                 mkdirSync(tmp)
                 await run(`unzip ${shellQuote(archive)} -d ${shellQuote(tmp)}`)
-                await validateAndOverwriteServerlessYml(path.join(serverlessRoot, 'serverless.yml'), namespaceName, {
+                await validateAndOverwriteServerlessYml(path.join(serverlessRoot, 'serverless.yml'), namespace, {
                     ...this.overwriteServerlessYmlConfig,
                     service,
                 })
                 await this.storage.action('_copyFromLocalPath', {
-                    path: `${STORAGE_SERVERLESS_PATH_PREFIX}/${namespaceName}/${service}`,
+                    path: `${STORAGE_SERVERLESS_PATH_PREFIX}/${namespace}/${service}`,
                     fromPath: serverlessRoot,
                     _message: args._message,
                 })
-                return await run(`cd ${shellQuote(serverlessRoot)} && serverless deploy || echo "EXIT CODE ERROR: "$?`)
+                const result = await run(`cd ${shellQuote(serverlessRoot)} && serverless deploy || echo "EXIT CODE ERROR: "$?`)
+                return {
+                    namespace,
+                    service,
+                    result,
+                }
             } catch (error) {
-                return error.toString()
+                return {
+                    namespace,
+                    service,
+                    error: error.toString(),
+                }
             } finally {
                 release()
             }

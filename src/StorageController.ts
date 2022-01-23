@@ -189,6 +189,7 @@ class StorageController extends BaseEventController {
 
     async action (name: string, args: { table: string, query?: { [key: string]: any }, object?: any, path: string, fromPath: string, value: string, _message?: string }): Promise<any> {
         logger.debug({ controller: this.name, action: name, args })
+        // TODO(pahaz): normalize table!
         // TODO(pahaz): need to validate path and table for file path injections
         if (name === 'create') {
             const data = await readTable(this.repo, this.repoPath, args.table)

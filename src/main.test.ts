@@ -38,7 +38,7 @@ export class TestController extends BaseEventController {
 }
 
 test('main([], [])', async () => {
-    const app = await main([], [])
+    const app = await main([])
     expect(app).toBeTruthy()
 })
 
@@ -66,7 +66,8 @@ test('main(rules, [controller(test)])', async () => {
 
     expect(jest.isMockFunction(logger.error)).toBeTruthy()
 
-    await main(rules, [controller])
+    await main([controller])
+    await setupRules(rules, { [controller.name]: controller })
     await controller.action('sendMessage', { type: 'example', value: 'hello' })
 
     expect(error.mock.calls).toHaveLength(0)
@@ -75,8 +76,8 @@ test('main(rules, [controller(test)])', async () => {
     expect(info.mock.calls).toMatchObject([
         [{
             'step': 'controller:event()',
-            'controllerName': 'test',
-            'eventName': 'message',
+            'controller': 'test',
+            'when': 'message',
         }],
     ])
     expect(debug.mock.calls).toHaveLength(7)
@@ -97,14 +98,12 @@ test('main(rules, [controller(test)])', async () => {
         }],
         [{
             'step': 'controller:on()',
-            'eventName': 'message',
             'ruleIndex': '0',
             'ruleControllerName': 'test',
             'ruleWhen': 'message',
         }],
         [{
             'step': 'action:do()',
-            'eventName': 'message',
             'ruleIndex': '0',
             'ruleControllerName': 'test',
             'doIndex': '0',
@@ -114,9 +113,9 @@ test('main(rules, [controller(test)])', async () => {
         }],
         [{
             'step': 'controller:event(!)',
-            'controllerName': 'test',
-            'eventName': 'message',
-            'eventData': { 'type': 'example', 'value': 'hello' },
+            'controller': 'test',
+            'when': 'message',
+            'data': { 'type': 'example', 'value': 'hello' },
         }],
     ])
     expect(controller.memory.size).toEqual(1)

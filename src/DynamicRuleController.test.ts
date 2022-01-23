@@ -51,7 +51,10 @@ test('DynamicRuleController validation action', async () => {
             },
         ]),
     })
-    expect(result).toEqual('AssertionError [ERR_ASSERTION]: rules: "do"."action" name should not starts with _')
+    expect(result).toEqual({
+        namespace: 'test',
+        error: 'AssertionError [ERR_ASSERTION]: rules: "do"."action" name should not starts with _',
+    })
 })
 
 test('DynamicRuleController validation controller', async () => {
@@ -77,7 +80,10 @@ test('DynamicRuleController validation controller', async () => {
             },
         ]),
     })
-    expect(result).toEqual('AssertionError [ERR_ASSERTION]: rules: "controller" name should not starts with _')
+    expect(result).toEqual({
+        namespace: 'test',
+        error: 'AssertionError [ERR_ASSERTION]: rules: "controller" name should not starts with _',
+    })
 })
 
 test('DynamicRuleController rules', async () => {
@@ -179,5 +185,8 @@ test('DynamicRuleController rules', async () => {
             },
         ]),
     })
-    expect(result).toEqual('Error: unknown rule controller name: github. Allowed: telegram, storage')
+    expect(result).toEqual({
+        namespace: 'test',
+        error: 'Error: unknown rule controller name: github. Allowed: telegram, storage',
+    })
 })
