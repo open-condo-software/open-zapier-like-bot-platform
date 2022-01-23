@@ -1,11 +1,12 @@
 import assert from 'assert'
 import crypto from 'crypto'
 import { Express } from 'express'
-import { fromPairs } from 'lodash'
+import { fromPairs, trim } from 'lodash'
 import { serializeError } from 'serialize-error'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
+import { asciiNormalizeName } from './utils'
 
 const STORAGE_WEBHOOK_PATH_PREFIX = 'webhook'
 const logger = getLogger('webhook')
@@ -36,7 +37,7 @@ class WebhookController extends BaseEventController {
                 })
                 if (hooks.length === 1) {
                     const hook = hooks[0]
-                    if (hook.methods.toLowerCase().includes(request.method.toLowerCase())) {
+                    if (hook.methods.includes(request.method.toLowerCase())) {
                         const name = hook.name
                         const status = parseInt(hook.status) || 200
                         const headers = fromPairs<string>(hook.headers)
@@ -49,7 +50,7 @@ class WebhookController extends BaseEventController {
                             method: request.method,
                             url: request.url,
                             query: request.query,
-                            body: request.body,
+                            body: request.body, // check memory leak?
                             headers: JSON.parse(JSON.stringify(request.headers)),
                         })
                         return
@@ -67,14 +68,17 @@ class WebhookController extends BaseEventController {
         logger.debug({ controller: this.name, action: name, args })
         if (name === '_createWebhook') {
             const hookId = crypto.randomBytes(20).toString('hex')
+            const namespace = asciiNormalizeName(args.namespace)
+            const name = asciiNormalizeName(args.name)
+            const methods = asciiNormalizeName(args.methods || 'GET,POST')
             return await this.storage.action('create', {
                 _message: args._message,
-                table: `${STORAGE_WEBHOOK_PATH_PREFIX}/${args.namespace}`,
+                table: `${STORAGE_WEBHOOK_PATH_PREFIX}/${namespace}`,
                 object: {
                     id: hookId,
-                    namespace: args.namespace,
-                    name: args.name,
-                    methods: args.methods || 'GET,POST',
+                    namespace,
+                    name,
+                    methods,
                     status: String(args._status || 200),
                     response: args._response || '{"status":"ok"}',
                     headers: args._headers || [['content-type', 'application/json; charset=utf-8']],
