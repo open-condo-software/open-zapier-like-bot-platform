@@ -1,6 +1,6 @@
 {
   "name": "ozyifttt",
-  "version": "1.2.2",
+  "version": "1.3.0",
   "private": false,
   "repository": "https://github.com/open-condo-software/open-zapier-like-bot-platform",
   "author": "https://github.com/pahaz",
@@ -16,8 +16,10 @@
     "@babel/preset-env": "*",
     "@babel/preset-typescript": "*",
     "@types/jest": "*",
+    "@types/supertest": "^2.0.11",
     "babel-jest": "*",
     "jest": "*",
+    "supertest": "^6.2.2",
     "ts-jest": "27.1.2",
     "ts-node": "9.1.1",
     "typescript": "4.5.4"
