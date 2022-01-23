@@ -11,6 +11,7 @@ import writeFileAtomic from 'write-file-atomic'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
+import { shellQuote } from './utils'
 
 const logger = getLogger('storage')
 const exec = util.promisify(child_process.exec)
@@ -36,24 +37,24 @@ async function cloneRepo (repoUrl: string, repoPath: string) {
     if (DEBUG) console.log('cloneRepo()', repoUrl, repoPath)
     const repo = { repoUrl, repoPath }
     if (!fs.existsSync(repoPath)) {
-        if (DEBUG) console.log(`cloneRepo() clone ${repoUrl} ${repoPath}`)
-        await run(`git clone '${repoUrl}' '${repoPath}'`)
+        if (DEBUG) console.log(`cloneRepo() clone ${shellQuote(repoUrl)} ${shellQuote(repoPath)}`)
+        await run(`git clone ${shellQuote(repoUrl)} ${shellQuote(repoPath)}`)
     }
     await syncRepo(repo, repoPath)
     return repo
 }
 
 async function syncRepo (repo: any, repoPath: string) {
-    await run(`git -C '${repoPath}' pull origin master && git -C '${repoPath}' push origin master`)
+    await run(`git -C ${shellQuote(repoPath)} pull origin master && git -C ${shellQuote(repoPath)} push origin master`)
 }
 
 async function commitFile (repo: any, repoPath: string, filename: string, meta: any = {}) {
     const release = await commitMutex.acquire()
     try {
-        await run(`git -C '${repoPath}' add '${filename}'`)
-        const stdout = await run(`git -C '${repoPath}' status -s`)
+        await run(`git -C ${shellQuote(repoPath)} add ${shellQuote(filename)}`)
+        const stdout = await run(`git -C ${shellQuote(repoPath)} status -s`)
         if (stdout.trim()) {
-            await run(`git -C '${repoPath}' commit -am '${meta.message.replace(/[\\']+/g, '') || 'commitFile()'}'`)
+            await run(`git -C ${shellQuote(repoPath)} commit -am ${shellQuote(meta.message || '-')}`)
         }
     } finally {
         release()
@@ -126,7 +127,7 @@ async function copyFiles (repo: any, repoPath: string, toPath: string, fromPath:
     try {
         const destinationPath = path.join(repoPath, toPath)
         await _copyFilesRecursively(fromPath, destinationPath)
-        await commitFile(repo, repoPath, toPath, meta)
+        await commitFile(repo, repoPath, toPath, { message: 'copyFiles', ...meta })
     } finally {
         release()
     }
