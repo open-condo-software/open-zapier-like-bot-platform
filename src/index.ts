@@ -11,6 +11,7 @@ export * from './ServerlessController'
 export * from './SchedulerController'
 export * from './RequestController'
 export * from './WebhookController'
+export * from './CounterController'
 export * from './logger'
 export * from './main'
 
