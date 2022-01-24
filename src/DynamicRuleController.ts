@@ -1,7 +1,7 @@
 import assert from 'assert'
 import { Mutex } from 'async-mutex'
 import { Express } from 'express'
-import { fromPairs, isArray, isObject, toPairs } from 'lodash'
+import { fromPairs, isArray, isPlainObject, toPairs } from 'lodash'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
@@ -24,9 +24,9 @@ function validateNamespaceAndRules (namespace: string, ruleObjects: Rules) {
         for (const does of rule.do) {
             assert.ok(!does.controller.startsWith('_'), 'rules: "do"."controller" name should not starts with _')
             assert.ok(!does.action.startsWith('_'), 'rules: "do"."action" name should not starts with _')
-            assert.ok(isObject(does.args), 'rules: "do"."args" is not an object')
+            assert.ok(isPlainObject(does.args), 'rules: "do"."args" is not an object')
             toPairs(does.args).forEach(([key, val]) => {
-                assert.ok(typeof val === 'string', `rules: "do"."args" (${key}) value is not a string`)
+                assert.ok(typeof val === 'string' || (isPlainObject(val)), `rules: "do"."args" (${key}) value is not a string or an object`)
                 assert.ok(!key.startsWith('_'), `rules: "do"."args" (${key}) should not starts with _`)
             })
         }
@@ -51,7 +51,7 @@ class RuleController extends BaseEventController {
             options.ruleControllers
                 .map(c => [c.name, c]))
         assert.strictEqual(typeof this.storage, 'object', 'RuleController config error: no storage!')
-        assert.ok(isObject(this.controllers), 'RuleController config error: no ruleControllers!')
+        assert.ok(isPlainObject(this.controllers), 'RuleController config error: no ruleControllers!')
         this.namespaces = {}
     }
 
