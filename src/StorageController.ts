@@ -22,6 +22,9 @@ const writeMutex = new Mutex()
 const DEBUG = false
 const SYNC_INTERVAL = 1000 * 60
 
+type StorageObject = Record<string, string>
+type StorageQuery = Record<string, string>
+
 async function run (command): Promise<string> {
     const release = await runMutex.acquire()
     try {
@@ -187,7 +190,16 @@ class StorageController extends BaseEventController {
         }, this.syncInterval)
     }
 
-    async action (name: string, args: { table: string, query?: { [key: string]: any }, object?: any, path: string, fromPath: string, value: string, _message?: string }): Promise<any> {
+    async action (name: 'create', args: { table: string, object: StorageObject }): Promise<StorageObject>;
+    async action (name: 'createOrUpdate', args: { table: string, query: StorageQuery, object: StorageObject }): Promise<Array<StorageObject>>;
+    async action (name: 'read', args: { table: string, query: StorageQuery }): Promise<Array<StorageObject>>;
+    async action (name: 'update', args: { table: string, query: StorageQuery, object: StorageObject }): Promise<Array<StorageObject>>;
+    async action (name: 'delete', args: { table: string, query: StorageQuery }): Promise<Array<StorageObject>>;
+    async action (name: 'readJson', args: { path: string }): Promise<StorageObject>;
+    async action (name: 'writeJson', args: { path: string, value: StorageObject }): Promise<StorageObject>;
+    async action (name: 'getJsonPaths', args: { path: string }): Promise<Array<string>>;
+    async action (name: '_copyFromLocalPath', args: { path: string, fromPath: string }): Promise<void>;
+    async action (name: string, args: Record<string, any>): Promise<any> {
         logger.debug({ controller: this.name, action: name, args })
         // TODO(pahaz): normalize table!
         // TODO(pahaz): need to validate path and table for file path injections
@@ -207,7 +219,7 @@ class StorageController extends BaseEventController {
                 }
             }
             await writeTable(this.repo, this.repoPath, args.table, data, (args._message) ? { message: args._message } : undefined)
-            return filtered.length === 0 ? args.object : filtered
+            return filtered.length === 0 ? data : filtered
         } else if (name === 'read') {
             const data = await readTable(this.repo, this.repoPath, args.table)
             const filtered = data.filter(obj => isMatch(obj, args.query))

@@ -13,6 +13,9 @@ import { getLogger } from './logger'
 const logger = getLogger('s3')
 const writeMutex = new Mutex()
 
+type StorageObject = Record<string, string>
+type StorageQuery = Record<string, string>
+
 function loadBinary (url) {
     return fetch(url)
         .then(response => {
@@ -168,7 +171,7 @@ class S3Controller extends BaseEventController {
         return
     }
 
-    async action (name: string, args: { table: string, query?: { [key: string]: any }, object?: any, path: string, value: string, _message?: string }): Promise<any> {
+    async action (name: string, args: { table: string, query?: StorageQuery, object?: StorageObject, path: string, value: string, _message?: string }): Promise<any> {
         // TODO(pahaz): normalize table!
         logger.debug({ controller: this.name, action: name, args })
         // TODO(pahaz): need to validate path and table for file path injections
@@ -188,7 +191,7 @@ class S3Controller extends BaseEventController {
                 }
             }
             await writeTable(this.s3, this.bucket, this.folder, args.table, data)
-            return filtered.length === 0 ? args.object : filtered
+            return filtered.length === 0 ? data : filtered
         } else if (name === 'read') {
             const data = await readTable(this.s3, this.bucket, this.folder, args.table)
             const filtered = data.filter(obj => isMatch(obj, args.query))
