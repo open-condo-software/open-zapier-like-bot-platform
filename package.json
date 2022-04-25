@@ -43,7 +43,7 @@
     "@types/write-file-atomic": "^3.0.3",
     "@types/yauzl": "^2.9.2",
     "async-mutex": "^0.3.2",
-    "axios": "^0.24.0",
+    "axios": "^0.27.0",
     "cors": "^2.8.5",
     "dotenv": "^10.0.0",
     "ensure-error": "^4.0.0",
