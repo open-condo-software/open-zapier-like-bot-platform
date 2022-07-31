@@ -34,15 +34,15 @@ function validateNamespaceAndRules (namespace: string, ruleObjects: Rules) {
 }
 
 interface RuleControllerOptions extends BaseEventControllerOptions {
-    storageController: BaseEventController
     ruleControllers: Array<BaseEventController>
+    storageController?: BaseEventController
 }
 
 class RuleController extends BaseEventController {
     name = '_rule'
     private controllers: Record<string, BaseEventController>
-    private storage: BaseEventController
     private namespaces: Record<string, any>
+    private storage?: BaseEventController
 
     constructor (private options: RuleControllerOptions) {
         super(options)
@@ -51,16 +51,19 @@ class RuleController extends BaseEventController {
             options.ruleControllers
                 .map(c => [c.name, c]))
         assert.strictEqual(typeof this.storage, 'object', 'RuleController config error: no storage!')
+        if (!this.storage) logger.warn({ controller: this.name, message: 'You created Dynamic Rule Controller without storage Controller options! All your new rules will be stored only in memory!' })
         assert.ok(isPlainObject(this.controllers), 'RuleController config error: no ruleControllers!')
         this.namespaces = {}
     }
 
     async init (app: Express): Promise<void> {
         logger.debug({ controller: this.name, step: 'init()', controllers: Object.keys(this.controllers) })
-        const namespaces: Array<string> = await this.storage.action('getJsonPaths', { path: STORAGE_RULE_PATH_PREFIX })
-        for (const namespace of namespaces) {
-            const rules = await this.storage.action('readJson', { path: `${STORAGE_RULE_PATH_PREFIX}/${namespace}` })
-            this.namespaces[namespace] = await setupRules(rules, this.controllers)
+        if (this.storage) {
+            const namespaces: Array<string> = await this.storage.action('getJsonPaths', { path: STORAGE_RULE_PATH_PREFIX })
+            for (const namespace of namespaces) {
+                const rules = await this.storage.action('readJson', { path: `${STORAGE_RULE_PATH_PREFIX}/${namespace}` })
+                this.namespaces[namespace] = await setupRules(rules, this.controllers)
+            }
         }
     }
 
@@ -75,11 +78,13 @@ class RuleController extends BaseEventController {
                 validateNamespaceAndRules(namespace, ruleObjects)
                 const disposers = this.namespaces[namespace] || []
                 this.namespaces[namespace] = await updateRules(ruleObjects, disposers, this.controllers)
-                await this.storage.action('writeJson', {
-                    path: `${STORAGE_RULE_PATH_PREFIX}/${namespace}`,
-                    value: ruleObjects,
-                    _message: args._message,
-                })
+                if (this.storage) {
+                    await this.storage.action('writeJson', {
+                        path: `${STORAGE_RULE_PATH_PREFIX}/${namespace}`,
+                        value: ruleObjects,
+                        _message: args._message,
+                    })
+                }
                 const ruleIds: Array<string> = this.namespaces[namespace].map(x => x.ruleId)
                 ruleIds.sort()
                 return {
