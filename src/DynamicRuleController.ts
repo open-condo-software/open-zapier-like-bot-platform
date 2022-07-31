@@ -38,6 +38,18 @@ interface RuleControllerOptions extends BaseEventControllerOptions {
     storageController?: BaseEventController
 }
 
+interface UpdateRulesActionArgs {
+    namespace: string
+    rules: string
+    _message?: string
+}
+
+interface UpdateRulesResult {
+    namespace: string
+    result?: string
+    error?: string
+}
+
 class RuleController extends BaseEventController {
     name = '_rule'
     private controllers: Record<string, BaseEventController>
@@ -67,40 +79,44 @@ class RuleController extends BaseEventController {
         }
     }
 
-    async action (name: string, args: { namespace: string, rules: string, _message?: string }): Promise<any> {
+    async action (name: string, args: UpdateRulesActionArgs): Promise<any> {
         logger.debug({ controller: this.name, step: 'action()', action: name, args })
         if (name === '_updateRules') {
-            const release = await writeMutex.acquire()
-            const namespace = asciiNormalizeName(args.namespace)
-            try {
-                // TODO(pahaz): need to normalize rules! For example, we can add some namespace prefix for storage paths!
-                const ruleObjects = JSON.parse(args.rules)
-                validateNamespaceAndRules(namespace, ruleObjects)
-                const disposers = this.namespaces[namespace] || []
-                this.namespaces[namespace] = await updateRules(ruleObjects, disposers, this.controllers)
-                if (this.storage) {
-                    await this.storage.action('writeJson', {
-                        path: `${STORAGE_RULE_PATH_PREFIX}/${namespace}`,
-                        value: ruleObjects,
-                        _message: args._message,
-                    })
-                }
-                const ruleIds: Array<string> = this.namespaces[namespace].map(x => x.ruleId)
-                ruleIds.sort()
-                return {
-                    namespace,
-                    result: ruleIds.join('\n'),
-                }
-            } catch (error) {
-                return {
-                    namespace,
-                    error: error.toString(),
-                }
-            } finally {
-                release()
-            }
+            return await this._updateRulesAction(args)
         } else {
             throw new Error(`unknown action name: ${name}`)
+        }
+    }
+
+    async _updateRulesAction (args: UpdateRulesActionArgs): Promise<UpdateRulesResult> {
+        const release = await writeMutex.acquire()
+        const namespace = asciiNormalizeName(args.namespace)
+        try {
+            // TODO(pahaz): need to normalize rules! For example, we can add some namespace prefix for storage paths!
+            const ruleObjects = JSON.parse(args.rules)
+            validateNamespaceAndRules(namespace, ruleObjects)
+            const disposers = this.namespaces[namespace] || []
+            this.namespaces[namespace] = await updateRules(ruleObjects, disposers, this.controllers)
+            if (this.storage) {
+                await this.storage.action('writeJson', {
+                    path: `${STORAGE_RULE_PATH_PREFIX}/${namespace}`,
+                    value: ruleObjects,
+                    _message: args._message,
+                })
+            }
+            const ruleIds: Array<string> = this.namespaces[namespace].map(x => x.ruleId)
+            ruleIds.sort()
+            return {
+                namespace,
+                result: ruleIds.join('\n'),
+            }
+        } catch (error) {
+            return {
+                namespace,
+                error: error.toString(),
+            }
+        } finally {
+            release()
         }
     }
 }
