@@ -62,7 +62,6 @@ class RuleController extends BaseEventController {
         this.controllers = fromPairs(
             options.ruleControllers
                 .map(c => [c.name, c]))
-        assert.strictEqual(typeof this.storage, 'object', 'RuleController config error: no storage!')
         if (!this.storage) logger.warn({ controller: this.name, message: 'You created Dynamic Rule Controller without storage Controller options! All your new rules will be stored only in memory!' })
         assert.ok(isPlainObject(this.controllers), 'RuleController config error: no ruleControllers!')
         this.namespaces = {}
