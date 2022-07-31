@@ -24,12 +24,15 @@ test('SchedulerController', async () => {
 
 test('SchedulerController on action', async () => {
     const controller = await makeInitedSchedulerController()
-    let VALUE = 'no'
+    let VALUE = 1
     controller.on('* * * * *', () => {
-        VALUE = 'yes'
+        VALUE += 1
+    })
+    controller.on('* * * * *', () => {
+        VALUE += 10
     })
 
-    await sleep(1000 * 60)
+    await sleep(1002 * 60)
 
-    expect(VALUE).toEqual('yes')
+    expect(VALUE).toEqual(12)
 })

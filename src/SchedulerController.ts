@@ -12,10 +12,12 @@ type SchedulerControllerOptions = BaseEventControllerOptions
 class SchedulerController extends BaseEventController {
     name = 'scheduler'
     private jobs: Job[]
+    private names: Set<string>
 
     constructor (private options: SchedulerControllerOptions) {
         super(options)
         this.jobs = []
+        this.names = new Set()
     }
 
     async init (app: Express): Promise<void> {
@@ -27,9 +29,11 @@ class SchedulerController extends BaseEventController {
     }
 
     on (name: string, listener: (data: any, meta?: any) => void) {
+        super.on(name, listener)
+        if (this.names.has(name)) return
+        this.names.add(name)
         const job = scheduleJob(name, () => this.emit(name, {}))
         this.jobs.push(job)
-        super.on(name, listener)
     }
 
     async action (name: string, args: { text: string, pattern: string, case: string }): Promise<any> {
