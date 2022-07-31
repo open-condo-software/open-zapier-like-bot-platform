@@ -1,0 +1,18 @@
+[
+  {
+    "controller": "telegram",
+    "when": "message",
+    "case": "{{ r/(hi|hello|\\/start)/ig.test(text) and chat.type == \"private\" }}",
+    "do": [
+      {
+        "controller": "telegram",
+        "action": "sendMessage",
+        "args": {
+          "chatId": "{{ chat.id }}",
+          "text": "HI! You can config me by `rules.json` file",
+          "mode": "Markdown"
+        }
+      }
+    ]
+  }
+]
