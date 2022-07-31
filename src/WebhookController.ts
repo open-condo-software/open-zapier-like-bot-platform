@@ -1,7 +1,7 @@
 import assert from 'assert'
 import crypto from 'crypto'
 import { Express } from 'express'
-import { fromPairs, trim } from 'lodash'
+import { fromPairs } from 'lodash'
 import { serializeError } from 'serialize-error'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
@@ -13,6 +13,22 @@ const logger = getLogger('webhook')
 
 interface WebhookControllerOptions extends BaseEventControllerOptions {
     storageController: BaseEventController
+}
+
+interface CreateWebhookActionArgs {
+    namespace: string
+    name: string
+    methods?: string
+    _status?: string
+    _response?: string
+    _headers?: Iterable<readonly [string, string]>
+    _message?: string
+}
+
+interface CreateWebhookResult {
+    id: string
+    namespace: string
+    name: string
 }
 
 class WebhookController extends BaseEventController {
@@ -64,29 +80,33 @@ class WebhookController extends BaseEventController {
         })
     }
 
-    async action (name: string, args: { namespace: string, name: string, methods?: string, _status?: string, _response?: string, _headers?: Iterable<readonly [string, string]>, _message?: string }): Promise<any> {
+    async action (name: string, args: CreateWebhookActionArgs): Promise<any> {
         logger.debug({ controller: this.name, action: name, args })
         if (name === '_createWebhook') {
-            const hookId = crypto.randomBytes(20).toString('hex')
-            const namespace = asciiNormalizeName(args.namespace)
-            const name = asciiNormalizeName(args.name)
-            const methods = asciiNormalizeName(args.methods || 'GET,POST')
-            return await this.storage.action('create', {
-                _message: args._message,
-                table: `${STORAGE_WEBHOOK_PATH_PREFIX}/${namespace}`,
-                object: {
-                    id: hookId,
-                    namespace,
-                    name,
-                    methods,
-                    status: String(args._status || 200),
-                    response: args._response || '{"status":"ok"}',
-                    headers: args._headers || [['content-type', 'application/json; charset=utf-8']],
-                },
-            })
+            return await this._createWebhookAction(args)
         } else {
             throw new Error(`unknown action name: ${name}`)
         }
+    }
+
+    async _createWebhookAction (args: { namespace: string; name: string; methods?: string; _status?: string; _response?: string; _headers?: Iterable<readonly [string, string]>; _message?: string }): Promise<CreateWebhookResult> {
+        const hookId = crypto.randomBytes(20).toString('hex')
+        const namespace = asciiNormalizeName(args.namespace)
+        const name = asciiNormalizeName(args.name)
+        const methods = asciiNormalizeName(args.methods || 'GET,POST')
+        return await this.storage.action('create', {
+            _message: args._message,
+            table: `${STORAGE_WEBHOOK_PATH_PREFIX}/${namespace}`,
+            object: {
+                id: hookId,
+                namespace,
+                name,
+                methods,
+                status: String(args._status || 200),
+                response: args._response || '{"status":"ok"}',
+                headers: args._headers || [['content-type', 'application/json; charset=utf-8']],
+            },
+        })
     }
 }
 
