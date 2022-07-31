@@ -61,15 +61,16 @@ class TelegramController extends BaseEventController {
     }
 
     async init (app: Express): Promise<void> {
-        this.bot = new TelegramBot(this.token)
-
         if (this.callback) {
+            this.bot = new TelegramBot(this.token)
             await this.bot.setWebHook(`${this.serverUrl}${this.callback}`)
 
             app.post(this.callback, (req, res) => {
                 this.bot.processUpdate(req.body)
                 res.sendStatus(200)
             })
+        } else {
+            this.bot = new TelegramBot(this.token, { polling: true })
         }
 
         this.bot.on('message', (msg: Message) => {
