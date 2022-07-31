@@ -13,31 +13,38 @@ import { getLogger } from './logger'
 
 const logger = getLogger('telegram')
 
-class HttpError extends Error {
-    private response: any
-
-    constructor (response) {
-        super(`${response.status} for ${response.url}`)
-        this.name = 'HttpError'
-        this.response = response
-    }
-}
-
-function loadBinary (url) {
-    return fetch(url)
-        .then(response => {
-            if (response.status == 200) {
-                return response.buffer()
-            } else {
-                throw new HttpError(response)
-            }
-        })
-}
-
 interface TelegramControllerOptions extends BaseEventControllerOptions {
     token: string
     callbackUrl: string
 }
+
+interface SendMessageActionArgs {
+    text: string
+    chatId: string | number
+    mode?: ParseMode
+}
+
+type SendMessageResult = TelegramBot.Message
+
+interface SendStickerActionArgs {
+    chatId: string | number
+    sticker: string
+}
+
+type SendStickerResult = TelegramBot.Message
+
+interface ReadFileActionArgs {
+    fileId: string
+    encoding?: string
+}
+
+type ReadFileResult = string
+
+interface TemporarilyDownloadFileLocallyActionArgs {
+    fileId: string
+}
+
+type TemporarilyDownloadFileLocallyResult = string
 
 class TelegramController extends BaseEventController {
     private token: string
@@ -74,31 +81,69 @@ class TelegramController extends BaseEventController {
     async action (name: string, args: { chatId: string | number, text: string, sticker: string, fileId: string, encoding?: string, mode?: ParseMode }): Promise<Message | any> {
         logger.debug({ controller: this.name, action: name, args })
         if (name === 'sendMessage') {
-            if (args.text.length > 4096) {
-                const chunks = chunkString(args.text, 4050)
-                for (const index in chunks) {
-                    const message = `CH[${index}]:\`${chunks[index].replace(/[`]/g, '')}\``
-                    await this.bot.sendMessage(args.chatId, message, { parse_mode: args.mode })
-                }
-                return
-            }
-            return await this.bot.sendMessage(args.chatId, args.text, { parse_mode: args.mode })
+            return await this.sendMessageAction(args)
         } else if (name === 'sendSticker') {
-            return await this.bot.sendSticker(args.chatId, args.sticker)
+            return await this.sendStickerAction(args)
         } else if (name === 'readFile') {
-            const url = await this.bot.getFileLink(args.fileId)
-            const buffer = await loadBinary(url)
-            return buffer.toString(args.encoding || 'utf-8')
+            return await this.readFileAction(args)
         } else if (name === '_temporarilyDownloadFileLocally') {
-            const url = await this.bot.getFileLink(args.fileId)
-            const buffer = await loadBinary(url)
-            const tmp = path.join(realpathSync(tmpdir()), randomBytes(20).toString('hex'))
-            fs.writeFileSync(tmp, buffer)
-            return tmp
+            return await this._temporarilyDownloadFileLocally(args)
         } else {
             throw new Error(`unknown action name: ${name}`)
         }
     }
+
+    async sendMessageAction (args: SendMessageActionArgs): Promise<SendMessageResult> {
+        if (args.text.length > 4096) {
+            const chunks = chunkString(args.text, 4050)
+            let result
+            for (const index in chunks) {
+                const message = `CH[${index}]:\`${chunks[index].replace(/[`]/g, '')}\``
+                result = await this.bot.sendMessage(args.chatId, message, { parse_mode: args.mode })
+            }
+            return result
+        }
+        return await this.bot.sendMessage(args.chatId, args.text, { parse_mode: args.mode })
+    }
+
+    async sendStickerAction (args: SendStickerActionArgs): Promise<SendStickerResult> {
+        return await this.bot.sendSticker(args.chatId, args.sticker)
+    }
+
+    async readFileAction (args: ReadFileActionArgs): Promise<ReadFileResult> {
+        const url = await this.bot.getFileLink(args.fileId)
+        const buffer = await loadBinary(url)
+        return buffer.toString(args.encoding || 'utf-8')
+    }
+
+    async _temporarilyDownloadFileLocally (args: TemporarilyDownloadFileLocallyActionArgs): Promise<TemporarilyDownloadFileLocallyResult> {
+        const url = await this.bot.getFileLink(args.fileId)
+        const buffer = await loadBinary(url)
+        const tmp = path.join(realpathSync(tmpdir()), randomBytes(20).toString('hex'))
+        fs.writeFileSync(tmp, buffer)
+        return tmp
+    }
+}
+
+class HttpError extends Error {
+    private response: any
+
+    constructor (response) {
+        super(`${response.status} for ${response.url}`)
+        this.name = 'HttpError'
+        this.response = response
+    }
+}
+
+function loadBinary (url) {
+    return fetch(url)
+        .then(response => {
+            if (response.status == 200) {
+                return response.buffer()
+            } else {
+                throw new HttpError(response)
+            }
+        })
 }
 
 function chunkString (str: string, len: number): Array<string> {
