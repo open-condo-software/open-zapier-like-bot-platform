@@ -36,19 +36,20 @@ async function run (command): Promise<string> {
     }
 }
 
-async function cloneRepo (repoUrl: string, repoPath: string) {
+async function cloneRepo (repoUrl: string, repoPath: string, repoBranch?: string) {
     if (DEBUG) console.log('cloneRepo()', repoUrl, repoPath)
     const repo = { repoUrl, repoPath }
     if (!fs.existsSync(repoPath)) {
         if (DEBUG) console.log(`cloneRepo() clone ${shellQuote(repoUrl)} ${shellQuote(repoPath)}`)
         await run(`git clone ${shellQuote(repoUrl)} ${shellQuote(repoPath)}`)
     }
-    await syncRepo(repo, repoPath)
+    await syncRepo(repo, repoPath, repoBranch)
     return repo
 }
 
-async function syncRepo (repo: any, repoPath: string) {
-    await run(`git -C ${shellQuote(repoPath)} pull origin master && git -C ${shellQuote(repoPath)} push origin master`)
+async function syncRepo (repo: any, repoPath: string, repoBranch?: string) {
+    const branch = (repoBranch) ? ` origin ${shellQuote(repoBranch)}` : ''
+    await run(`git -C ${shellQuote(repoPath)} pull ${branch} && git -C ${shellQuote(repoPath)} push ${branch}`)
 }
 
 async function commitFile (repo: any, repoPath: string, filename: string, meta: any = {}) {
@@ -156,6 +157,7 @@ async function writeJson (repo: any, repoPath: string, readPath: string, data: a
 interface StorageControllerOptions extends BaseEventControllerOptions {
     url: string
     localCachePath?: string
+    branch?: string
 }
 
 class StorageController extends BaseEventController {
@@ -165,6 +167,7 @@ class StorageController extends BaseEventController {
     private setIntervalId: NodeJS.Timeout
     private syncInterval: number
     private repoPath: string
+    private branch: string
 
     constructor (options: StorageControllerOptions) {
         super(options)
@@ -174,10 +177,11 @@ class StorageController extends BaseEventController {
         this.url = options.url
         this.syncInterval = SYNC_INTERVAL
         this.repoPath = options.localCachePath || '.storage.tmp'
+        this.branch = options.branch
     }
 
     async init (app: Express): Promise<void> {
-        this.repo = await cloneRepo(this.url, this.repoPath)
+        this.repo = await cloneRepo(this.url, this.repoPath, this.branch)
         this.setIntervalId = setInterval(async () => {
             const release = await writeMutex.acquire()
             try {
