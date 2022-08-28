@@ -12,10 +12,10 @@ const logger = getLogger('event')
 
 interface EventStorageControllerOptions extends BaseEventControllerOptions {
     onEventControllers: Array<BaseEventController>
-    onEventSendToTelegramChatId: string
+    onEventSendToTelegramChatId?: string
     onEventSendDelay?: number
     storageController: BaseEventController
-    telegramController: BaseEventController
+    telegramController?: BaseEventController
     skip?: (event: any) => boolean,
     webEventAccessToken?: string,
     webEventListAccessToken?: string,
@@ -24,11 +24,11 @@ interface EventStorageControllerOptions extends BaseEventControllerOptions {
 class EventStorageController extends BaseEventController {
     name = '_event'
     private controllers: Record<string, BaseEventController>
-    private telegram: BaseEventController
+    private telegram?: BaseEventController
     private storage: BaseEventController
     private memoryEvents: Array<any>
     private memoryEventIndex: number
-    private onEventSendToTelegramChatId: string
+    private onEventSendToTelegramChatId?: string
     private onEventSendDelay: number
     private onEventSendIndex: number
     private onEventSendTimeoutHandler: NodeJS.Timeout
@@ -41,7 +41,6 @@ class EventStorageController extends BaseEventController {
         this.telegram = options.telegramController
         this.storage = options.storageController
         this.controllers = fromPairs(options.onEventControllers.map(c => [c.name, c]))
-        assert.strictEqual(typeof this.telegram, 'object', 'EventStorage config error: no telegram!')
         assert.strictEqual(typeof this.storage, 'object', 'EventStorage config error: no storage!')
         assert.ok(options.onEventControllers.length > 0, 'EventStorage config error: no controllers!')
         this.memoryEvents = new Array<any>(MAX_MEMORY_EVENTS)
@@ -57,6 +56,7 @@ class EventStorageController extends BaseEventController {
     async init (app: Express): Promise<void> {
         const controllerNames = Object.keys(this.controllers)
         logger.debug({ controller: this.name, step: 'init()', controllers: controllerNames })
+        // NOTE: subscribe on all evens
         for (const controllerName of controllerNames) {
             const controller = this.controllers[controllerName]
             controller.on('any', async (event) => {
@@ -65,8 +65,23 @@ class EventStorageController extends BaseEventController {
                     logger.debug({ controller: this.name, step: 'SKIPPED', eventId, eventController: controller, eventWhen: when })
                     return
                 }
+
+                // NOTE: store in memory
                 this.memoryEventIndex = (this.memoryEventIndex + 1) % MAX_MEMORY_EVENTS
                 this.memoryEvents[this.memoryEventIndex] = event
+
+                // NOTE: store in storage
+                try {
+                    await this.storage.action('writeJson', {
+                        path: `${STORAGE_EVENT_PATH_PREFIX}/${controller}/${when}/${eventId.substring(0, 2)}/${eventId}`,
+                        value: event,
+                        _message: `event:${controller}:${when}:${eventId}`,
+                    })
+                } catch (error) {
+                    logger.error({ controller: this.name, step: 'onWriteEvent()', error: serializeError(error) })
+                }
+
+                // NOTE: send to telegram
                 if (!this.onEventSendTimeoutHandler) {
                     const onEventSendMessage = async () => {
                         let newEvents
@@ -87,38 +102,31 @@ class EventStorageController extends BaseEventController {
 
                         this.onEventSendIndex = this.memoryEventIndex
                         this.onEventSendTimeoutHandler = null
-                        const text = newEvents
-                            .map(({ id: eventId, controller, when }) => `<code>${controller}</code>:<code>${when}</code>:<a href="${this.serverUrl}/_event/${controller}/${when}/${eventId}?token=${this.webEventAccessToken}">${eventId}</a>`)
-                            .join('\n')
 
-                        try {
-                            await this.telegram.action('sendMessage', {
-                                chatId: this.onEventSendToTelegramChatId,
-                                text,
-                                mode: 'HTML',
-                            })
-                        } catch (error) {
-                            logger.error({
-                                controller: this.name,
-                                step: 'onSendEventMessage()',
-                                error: serializeError(error),
-                                index: this.memoryEventIndex,
-                                sentIndex: this.onEventSendIndex,
-                            })
+                        if (this.telegram && this.onEventSendToTelegramChatId) {
+                            const text = newEvents
+                                .map(({ id: eventId, controller, when }) => `<code>${controller}</code>:<code>${when}</code>:<a href="${this.serverUrl}/_event/${controller}/${when}/${eventId}?token=${this.webEventAccessToken}">${eventId}</a>`)
+                                .join('\n')
+
+                            try {
+                                await this.telegram.action('sendMessage', {
+                                    chatId: this.onEventSendToTelegramChatId,
+                                    text,
+                                    mode: 'HTML',
+                                })
+                            } catch (error) {
+                                logger.error({
+                                    controller: this.name,
+                                    step: 'onSendEventMessage()',
+                                    error: serializeError(error),
+                                    index: this.memoryEventIndex,
+                                    sentIndex: this.onEventSendIndex,
+                                })
+                            }
                         }
                     }
 
                     this.onEventSendTimeoutHandler = setTimeout(onEventSendMessage, this.onEventSendDelay)
-                }
-
-                try {
-                    await this.storage.action('writeJson', {
-                        path: `${STORAGE_EVENT_PATH_PREFIX}/${controller}/${when}/${eventId.substr(0, 2)}/${eventId}`,
-                        value: event,
-                        _message: `event:${controller}:${when}:${eventId}`,
-                    })
-                } catch (error) {
-                    logger.error({ controller: this.name, step: 'onWriteEvent()', error: serializeError(error) })
                 }
             })
         }
