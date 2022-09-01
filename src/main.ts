@@ -310,6 +310,7 @@ async function main (controllers: Array<BaseEventController>): Promise<Express> 
 }
 
 export {
+    manager,
     updateRules,
     setupRules,
     main,
