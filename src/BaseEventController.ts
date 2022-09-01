@@ -42,8 +42,8 @@ abstract class BaseEventController {
         const time = new Date().toISOString()
         const meta = { id, time, controller: this.name, when: name }
         if (this.ignore && this.ignore(name, data)) return
-        this.emitter.emit(name, data, meta)
         this.emitter.emit('any', { ...meta, data }, meta)
+        this.emitter.emit(name, data, meta)
     }
 }
 

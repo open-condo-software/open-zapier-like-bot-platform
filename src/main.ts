@@ -11,6 +11,8 @@ import { AbortActionError } from './errors'
 
 import { logger } from './logger'
 
+const EventEmitter = require('events')
+
 type StorageObject = Record<string, string>
 
 type DoArray =
@@ -48,7 +50,44 @@ type Rules = Array<Rule>
 type RuleDisposer = { controller: BaseEventController, ruleWhen: string, eventHandler: (data: any, meta: any) => void, rule: Rule, ruleId: string }
 type RuleDisposers = Array<RuleDisposer>
 
+class RuntimeManager {
+    private readonly emitter: typeof EventEmitter
+
+    constructor () {
+        this.emitter = new EventEmitter()
+    }
+
+    public on (name: string, listener: (data: any, meta?: any) => void): void {
+        this.emitter.on(name, listener)
+    }
+
+    public off (name: string, listener: (data: any, meta?: any) => void): void {
+        this.emitter.off(name, listener)
+    }
+
+    _onControllerEventStart (controllerName: string, eventId: string, meta: any, data: any) {
+        this.emitter.emit('start', { controllerName, eventId, meta, data })
+    }
+
+    _onRuleEventHandle (controllerName: string, eventId: string, meta: any, data: any, ruleId: string, ruleCaseResult?: Record<string, any> | string) {
+        this.emitter.emit('rule', { controllerName, eventId, meta, data, ruleId, ruleCaseResult })
+    }
+
+    _onRuleEventHandleActionResult (controllerName: string, eventId: string, meta: any, data: any, ruleId: string, doIndex: string, doAs: string, result: any) {
+        this.emitter.emit('do', { controllerName, eventId, meta, data, ruleId, doIndex, doAs, result })
+    }
+
+    _onRuleEventHandleActionError (controllerName: string, eventId: string, meta: any, data: any, ruleId: string, doIndex: string, doAs: string, error: Error) {
+        this.emitter.emit('doError', { controllerName, eventId, meta, data, ruleId, doIndex, doAs, error })
+    }
+
+    _onRuleEventHandleError (controllerName: string, eventId: string, meta: any, data: any, ruleId: string, error: Error) {
+        this.emitter.emit('ruleError', { controllerName, eventId, meta, data, ruleId, error })
+    }
+}
+
 const nunjucksEnv = nunjucks.configure({ autoescape: false })
+const manager = new RuntimeManager()
 
 function nunjucksRecursiveCompile (obj) {
     if (!obj) return obj
@@ -86,10 +125,11 @@ async function initControllers (controllers: Array<BaseEventController>, app: ex
             controllerName = controller.name
             logger.debug({ step: 'setup:init(controller)', controllerName, controllerIndex })
             await controller.init(app)
-            controller.on('any', (event) => {
+            controller.on('any', (event, meta) => {
                 const { id: eventId, controller, when, time, data } = event
                 logger.info({ step: 'controller:event()', eventId, controller, when, time })
                 logger.debug({ step: 'controller:event(!)', eventId, controller, when, time, data })
+                manager._onControllerEventStart(meta.controller, eventId, meta, data)
             })
         } catch (error) {
             logger.error({
@@ -151,7 +191,8 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
             }
             if (!ruleDo || !Array.isArray(ruleDo)) throw new Error('unknown rule.do type')
             ruleDoCompiled = ruleDo.map(({ args, ...others }) => ({ args: nunjucksRecursiveCompile(args), ...others }))
-            const eventHandler = async (data, { id: eventId }) => {
+            const eventHandler = async (data, meta) => {
+                const { id: eventId } = meta
                 const event = { ...data }
                 logger.debug({
                     step: 'controller:on()',
@@ -164,9 +205,12 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
                             step: 'controller:on(rule.case)',
                             eventId, ruleId, ruleCase, ruleCaseResult,
                         })
+                        manager._onRuleEventHandle(meta.controller, eventId, meta, data, ruleId, ruleCaseResult)
                         if (ruleCaseResult.toLowerCase() !== 'true') {
                             return
                         }
+                    } else {
+                        manager._onRuleEventHandle(meta.controller, eventId, meta, data, ruleId)
                     }
                     for (const doIndex in ruleDoCompiled) {
                         const d = ruleDoCompiled[doIndex]
@@ -196,6 +240,7 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
                             if (doAs) {
                                 set(event, doAs, result)
                             }
+                            manager._onRuleEventHandleActionResult(meta.controller, eventId, meta, data, ruleId, doIndex, doAs, result)
                         } catch (error) {
                             if (error instanceof AbortActionError || error.message.startsWith('ABORT')) {
                                 logger.debug({ step: 'ABORT<-action:do()', eventId, ruleId, doId })
@@ -207,6 +252,7 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
                                     doId, doIndex, doControllerName, doAction, doArgs, doAs,
                                 })
                             }
+                            manager._onRuleEventHandleActionError(meta.controller, eventId, meta, data, ruleId, doIndex, doAs, error)
                             throw error
                         }
                     }
@@ -221,6 +267,7 @@ async function setupRules (rules: Rules, c: { [key: string]: BaseEventController
                             eventId, ruleId, ruleIndex, ruleControllerName, ruleWhen,
                         })
                     }
+                    manager._onRuleEventHandleError(meta.controller, eventId, meta, data, ruleId, error)
                     throw error
                 }
             }

@@ -67,8 +67,8 @@ class EventStorageController extends BaseEventController {
                 }
 
                 // NOTE: store in memory
-                this.memoryEventIndex = (this.memoryEventIndex + 1) % MAX_MEMORY_EVENTS
                 this.memoryEvents[this.memoryEventIndex] = event
+                this.memoryEventIndex = (this.memoryEventIndex + 1) % MAX_MEMORY_EVENTS
 
                 // NOTE: store in storage
                 try {
@@ -105,7 +105,7 @@ class EventStorageController extends BaseEventController {
 
                         if (this.telegram && this.onEventSendToTelegramChatId) {
                             const text = newEvents
-                                .map(({ id: eventId, controller, when }) => `<code>${controller}</code>:<code>${when}</code>:<a href="${this.serverUrl}/_event/${controller}/${when}/${eventId}?token=${this.webEventAccessToken}">${eventId}</a>`)
+                                .map(({ id: eventId, controller, when }) => `<code>${controller}</code>:<code>${when}</code>:<a href="${this.serverUrl}/_event/${controller}/${when}/${eventId}?token=${this.webEventAccessToken}" rel="nofollow">${eventId}</a>`)
                                 .join('\n')
 
                             try {
