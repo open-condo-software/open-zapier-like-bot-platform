@@ -27,8 +27,9 @@ const writeMutex = new Mutex()
 async function run (command): Promise<string> {
     const release = await runMutex.acquire()
     try {
+        debug('start command "%s"', command)
         const { stderr, stdout } = await exec(command)
-        debug('run command "%s" stdout=%o; stderr=%o', command, stdout, stderr)
+        debug('command "%s" stdout=%o; stderr=%o', command, stdout, stderr)
         return stdout
     } finally {
         release()
