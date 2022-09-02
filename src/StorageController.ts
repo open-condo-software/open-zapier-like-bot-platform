@@ -8,18 +8,19 @@ import path from 'path'
 import { serializeError } from 'serialize-error'
 import util from 'util'
 import writeFileAtomic from 'write-file-atomic'
+import { debug as getDebugger } from 'debug'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
 import { shellQuote } from './utils'
 
 const logger = getLogger('storage')
+const debug = getDebugger('storage')
 const exec = util.promisify(child_process.exec)
 const runMutex = new Mutex()
 const commitMutex = new Mutex()
 const writeMutex = new Mutex()
 
-const DEBUG = false
 const SYNC_INTERVAL = 1000 * 60
 
 type StorageObject = Record<string, string>
@@ -29,7 +30,7 @@ async function run (command): Promise<string> {
     const release = await runMutex.acquire()
     try {
         const { stderr, stdout } = await exec(command)
-        // logger.debug({ step: 'exec', command, stderr, stdout })
+        debug('run command "%s" stdout=%o; stderr=%o', command, stdout, stderr)
         return stdout
     } finally {
         release()
@@ -37,10 +38,10 @@ async function run (command): Promise<string> {
 }
 
 async function cloneRepo (repoUrl: string, repoPath: string, repoBranch?: string) {
-    if (DEBUG) console.log('cloneRepo()', repoUrl, repoPath)
+    debug('cloneRepo(repoUrl=%s, repoPath=%s, repoBranch=%s)', repoUrl, repoPath, repoBranch)
     const repo = { repoUrl, repoPath }
     if (!fs.existsSync(repoPath)) {
-        if (DEBUG) console.log(`cloneRepo() clone ${shellQuote(repoUrl)} ${shellQuote(repoPath)}`)
+        debug(`cloneRepo(...): clone %s %s`, repoUrl, repoPath)
         await run(`git clone ${shellQuote(repoUrl)} ${shellQuote(repoPath)}`)
     }
     await syncRepo(repo, repoPath, repoBranch)
@@ -178,6 +179,7 @@ class StorageController extends BaseEventController {
         this.syncInterval = SYNC_INTERVAL
         this.repoPath = options.localCachePath || '.storage.tmp'
         this.branch = options.branch
+        debug('StorageController(url=%s, repoPath=%s, branch=%s)', this.url, this.repoPath, this.branch)
     }
 
     async init (app: Express): Promise<void> {

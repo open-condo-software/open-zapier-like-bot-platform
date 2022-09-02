@@ -7,15 +7,17 @@ import fetch from 'node-fetch'
 import TelegramBot, { Message, ParseMode } from 'node-telegram-bot-api'
 import { tmpdir } from 'os'
 import path from 'path'
+import { debug as getDebugger } from 'debug'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
 
 const logger = getLogger('telegram')
+const debug = getDebugger('telegram')
 
 interface TelegramControllerOptions extends BaseEventControllerOptions {
     token: string
-    callbackUrl: string
+    callbackUrl?: string
 }
 
 interface SendMessageActionArgs {
@@ -49,7 +51,7 @@ type TemporarilyDownloadFileLocallyResult = string
 class TelegramController extends BaseEventController {
     private token: string
     private bot: TelegramBot
-    private callback: string
+    private callback?: string
     name = 'telegram'
 
     constructor (options: TelegramControllerOptions) {
@@ -58,6 +60,7 @@ class TelegramController extends BaseEventController {
         assert.strictEqual(typeof options.token, 'string', 'config error, require token!')
         this.token = options.token
         this.callback = options.callbackUrl
+        debug('TelegramController(token=%s, callback=%s)', this.token, this.callback)
     }
 
     async init (app: Express): Promise<void> {

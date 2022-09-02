@@ -11,6 +11,7 @@ import { tmpdir } from 'os'
 import path from 'path'
 import util from 'util'
 import { open } from 'yauzl'
+import { debug as getDebugger } from 'debug'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
@@ -18,6 +19,7 @@ import { asciiNormalizeName, shellQuote } from './utils'
 
 const STORAGE_SERVERLESS_PATH_PREFIX = 'serverless'
 const logger = getLogger('serverless')
+const debug = getDebugger('serverless')
 const exec = util.promisify(child_process.exec)
 const runMutex = new Mutex()
 const writeMutex = new Mutex()
@@ -26,7 +28,7 @@ async function run (command): Promise<string> {
     const release = await runMutex.acquire()
     try {
         const { stderr, stdout } = await exec(command)
-        // logger.debug({ step: 'exec', command, stderr, stdout })
+        debug('run command "%s" stdout=%o; stderr=%o', command, stdout, stderr)
         return stdout
     } finally {
         release()
@@ -92,6 +94,7 @@ class ServerlessController extends BaseEventController {
         this.overwriteServerlessYmlConfig = options.overwriteServerlessYmlConfig || {}
         this.storage = options.storageController
         assert.strictEqual(typeof this.storage, 'object', 'ServerlessController config error: no storage!')
+        debug('ServerlessController()')
     }
 
     async init (app: Express): Promise<void> {
