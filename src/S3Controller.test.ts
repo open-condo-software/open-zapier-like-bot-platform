@@ -21,19 +21,29 @@ test('S3Controller', async () => {
     expect(controller.name).toEqual('s3')
 })
 
-test('S3Controller CRUD', async () => {
-    const id1 = 'ид1'
-    const table = 'test1тт'
+test('StorageController CRUD', async () => {
     const controller = await makeInitedStorageController()
-    await controller.action('create', { table, object: { id: id1, name: 'foo' } })
-    const read1 = await controller.action('read', { table, query: {} })
-    expect(read1).toEqual([{ id: id1, name: 'foo' }])
-    await controller.action('update', { table, query: { id: id1 }, object: { name: 'new', bar: 22 } })
-    const read2 = await controller.action('read', { table, query: {} })
-    expect(read2).toEqual([{ id: id1, name: 'new', bar: 22 }])
-    await controller.action('delete', { table, query: { id: id1 } })
-    const read3 = await controller.action('read', { table, query: {} })
-    expect(read3).toEqual([])
+    await controller.action('delete', { table: 'test1', query: {} })
+    expect(await controller.action('create', { table: 'test1', object: { id: 1, name: 'foo' } })).toEqual({ id: 1, name: 'foo' })
+    expect(await controller.action('read', { table: 'test1', query: {} })).toEqual([{ id: 1, name: 'foo' }])
+    expect(await controller.action('update', { table: 'test1', query: { id: 1 }, object: { bar: 22 } })).toEqual([{ id: 1, bar: 22, name: 'foo' }])
+    expect(await controller.action('update', { table: 'test1', query: { id: 1 }, object: { name: 'new' } })).toEqual([{ id: 1, bar: 22, name: 'new' }])
+    expect(await controller.action('read', { table: 'test1', query: {} })).toEqual([{ id: 1, name: 'new', bar: 22 }])
+    expect(await controller.action('delete', { table: 'test1', query: { id: 1 } })).toEqual([{ id: 1, name: 'new', bar: 22 }])
+    expect(await controller.action('read', { table: 'test1', query: {} })).toEqual([])
+})
+
+test('StorageController CRUD duplicate id', async () => {
+    const controller = await makeInitedStorageController()
+    await controller.action('delete', { table: 'test2', query: {} })
+    expect(await controller.action('create', { table: 'test2', object: { id: 1, name: 'foo' } })).toEqual({ id: 1, name: 'foo' })
+    expect(await controller.action('create', { table: 'test2', object: { id: 1, name: 'bar' } })).toEqual({ id: 1, name: 'bar' })
+    expect(await controller.action('read', { table: 'test2', query: { id: 1 } })).toEqual([{ id: 1, name: 'foo' }, { id: 1, name: 'bar' }])
+    expect(await controller.action('update', { table: 'test2', query: { id: 1 }, object: { bar: 22 } })).toEqual([{ id: 1, name: 'foo', bar: 22 }, { id: 1, name: 'bar', bar: 22 }])
+    expect(await controller.action('update', { table: 'test2', query: { id: 1 }, object: { name: 'new' } })).toEqual([{ id: 1, name: 'new', bar: 22 }, { id: 1, name: 'new', bar: 22 }])
+    expect(await controller.action('read', { table: 'test2', query: {} })).toEqual([{ id: 1, name: 'new', bar: 22 }, { id: 1, name: 'new', bar: 22 }])
+    expect(await controller.action('delete', { table: 'test2', query: { id: 1 } })).toEqual([{ id: 1, name: 'new', bar: 22 }, { id: 1, name: 'new', bar: 22 }])
+    expect(await controller.action('read', { table: 'test2', query: {} })).toEqual([])
 })
 
 test('S3Controller createOrUpdate', async () => {

@@ -1,18 +1,21 @@
+import { config } from 'dotenv'
 import express from 'express'
-
 import { BaseEventController } from './BaseEventController'
-import { StorageController } from './StorageController'
+import { PostgresController } from './PostgresController'
+
+config()
+const postgresUrl = process.env.DATABASE_URL
 
 async function makeInitedStorageController () {
     const app = express()
-    const controller = new StorageController({ url: `${__dirname}/../test/empty-test-git-storage`, localCachePath: './.storage.test.tmp', serverUrl: 'https://localhost:3001' })
+    const controller = new PostgresController({ postgresUrl, serverUrl: 'https://localhost:3001' })
     await controller.init(app)
     return controller as BaseEventController
 }
 
 test('StorageController', async () => {
     const controller = await makeInitedStorageController()
-    expect(controller.name).toEqual('storage')
+    expect(controller.name).toEqual('postgres')
 })
 
 test('StorageController CRUD', async () => {
@@ -65,7 +68,7 @@ test('StorageController write/read Json', async () => {
     await controller.action('writeJson', { path: 'test1/2', value: { id: 2, name: 'boo' }, _message: 't2' })
     const read1 = await controller.action('readJson', { path: 'test1/1' })
     expect(read1).toEqual({ id: 1, name: 'foo' })
-    const read2 = await controller.action('getJsonPaths', {  path: 'test1' })
+    const read2 = await controller.action('getJsonPaths', { path: 'test1' })
     expect(read2).toEqual(['1', '2'])
 })
 
@@ -93,15 +96,6 @@ test('StorageController write/read Json with the same path', async () => {
     expect(await controller.action('readJson', { path: './test2/././' })).toEqual({ id: 4, name: 'foo' })
     expect(await controller.action('readJson', { path: './test2/././xx/..' })).toEqual({ id: 4, name: 'foo' })
     expect(await controller.action('readJson', { path: './test2/././xx/../' })).toEqual({ id: 4, name: 'foo' })
-    const read2 = await controller.action('getJsonPaths', {  path: 'test2' })
+    const read2 = await controller.action('getJsonPaths', { path: 'test2' })
     expect(read2).toEqual(['', 'x./y'])
-})
-
-test('StorageController _copyFiles', async () => {
-    const controller = await makeInitedStorageController()
-    await controller.action('_copyFromLocalPath', { path: 'test1/dir1', fromPath: `${__dirname}/../test/storage-test-files`, _message: '_copyFiles test' })
-    const read1 = await controller.action('read', { table: 'test1/dir1/my', query: {} })
-    expect(read1).toEqual([{ id: 1, name: 'bar' }])
-    const read2 = await controller.action('readJson', { path: 'test1/dir1/my' })
-    expect(read2).toEqual({ id: 1, name: 'foo' })
 })
