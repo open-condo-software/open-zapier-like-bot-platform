@@ -174,6 +174,11 @@ class S3Controller extends BaseEventController {
     async action (name: string, args: { table: string, query?: StorageQuery, object?: StorageObject, path: string, value: string, _message?: string }): Promise<any> {
         // TODO(pahaz): normalize table!
         logger.debug({ controller: this.name, action: name, args })
+        if (args.path) {
+            args.path = path.normalize(args.path).replace(/\/+$/, "")
+            if (args.path.startsWith('.') || args.path.startsWith('/') || args.path.includes('..')) throw new Error('found wrong path format')
+        }
+
         // TODO(pahaz): need to validate path and table for file path injections
         if (name === 'create') {
             const data = await readTable(this.s3, this.bucket, this.folder, args.table)
@@ -206,7 +211,6 @@ class S3Controller extends BaseEventController {
             return filtered
         } else if (name === 'delete') {
             const data = await readTable(this.s3, this.bucket, this.folder, args.table)
-            console.log(data, args.query)
             const allowed = data.filter(obj => !isMatch(obj, args.query))
             await writeTable(this.s3, this.bucket, this.folder, args.table, allowed, (args._message) ? { message: args._message } : undefined)
             return data.filter(obj => isMatch(obj, args.query))

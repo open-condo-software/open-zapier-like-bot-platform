@@ -1,6 +1,7 @@
 import assert from 'assert'
 import { Mutex } from 'async-mutex'
 import child_process from 'child_process'
+import { debug as getDebugger } from 'debug'
 import { Express } from 'express'
 import fs from 'fs'
 import { isArray, isMatch } from 'lodash'
@@ -8,7 +9,6 @@ import path from 'path'
 import { serializeError } from 'serialize-error'
 import util from 'util'
 import writeFileAtomic from 'write-file-atomic'
-import { debug as getDebugger } from 'debug'
 
 import { BaseEventController, BaseEventControllerOptions } from './BaseEventController'
 import { getLogger } from './logger'
@@ -17,6 +17,8 @@ import { shellQuote } from './utils'
 const logger = getLogger('storage')
 const debug = getDebugger('storage')
 const exec = util.promisify(child_process.exec)
+const readdir = util.promisify(fs.readdir)
+const stat = util.promisify(fs.stat)
 const runMutex = new Mutex()
 const commitMutex = new Mutex()
 const writeMutex = new Mutex()
@@ -25,6 +27,15 @@ const SYNC_INTERVAL = 1000 * 60
 
 type StorageObject = Record<string, string>
 type StorageQuery = Record<string, string>
+
+async function getFiles (dir) {
+    const subdirs = await readdir(dir)
+    const files = await Promise.all(subdirs.map(async (subdir) => {
+        const res = path.join(dir, subdir)
+        return (await stat(res)).isDirectory() ? getFiles(res) : res
+    }))
+    return files.reduce((a, f) => a.concat(f), [])
+}
 
 async function run (command): Promise<string> {
     const release = await runMutex.acquire()
@@ -109,7 +120,10 @@ async function readJson (repo: any, repoPath: string, readPath: string) {
 async function getJsonPaths (repo: any, repoPath: string, readPath: string) {
     try {
         const filePath = path.join(repoPath, readPath, '/')
-        return (await fs.promises.readdir(filePath)).filter(p => p.endsWith('.data.json')).map(p => p.substr(0, p.length - '.data.json'.length))
+        return (await getFiles(filePath))
+            .filter(x => x.endsWith('.data.json'))
+            .map(x => path.relative(filePath, x))
+            .map(x => x.substring(0, x.length - '.data.json'.length))
     } catch (error) {
         logger.warn({ step: 'getJsonPaths', repoPath, path: readPath, error: serializeError(error) })
         return []
@@ -208,6 +222,11 @@ class StorageController extends BaseEventController {
     async action (name: '_copyFromLocalPath', args: { path: string, fromPath: string }): Promise<void>;
     async action (name: string, args: Record<string, any>): Promise<any> {
         logger.debug({ controller: this.name, action: name, args })
+        if (args.path) {
+            args.path = path.normalize(args.path).replace(/\/+$/, '')
+            if (args.path.startsWith('.') || args.path.startsWith('/') || args.path.includes('..')) throw new Error('found wrong path format')
+        }
+
         // TODO(pahaz): normalize table!
         // TODO(pahaz): need to validate path and table for file path injections
         if (name === 'create') {
