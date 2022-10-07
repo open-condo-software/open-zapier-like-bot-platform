@@ -43,13 +43,15 @@ class PostgresController extends BaseEventController {
 
     async init (app: Express): Promise<void> {
         await this.db.raw('select 1+1 as result')
+        const table = this.table
+        const tableForObjs = this.tableForObjs
         const hasDataTable = await this.db.schema.hasTable(this.table)
         const hasDataTableForObjs = await this.db.schema.hasTable(this.tableForObjs)
         debug('PostgresController(): inited! hasDataTable=%s', hasDataTable, hasDataTableForObjs)
         if (!hasDataTable) {
             await this.db.schema.createTable(this.table, function (table) {
                 table.string('path')
-                table.unique(['path'], { constraintName: `${this.table}_unique_path` } as any)
+                table.unique(['path'], { constraintName: `${table}_unique_path` } as any)
                 table.jsonb('value')
                 table.string('_message')
             })
@@ -57,9 +59,9 @@ class PostgresController extends BaseEventController {
         if (!hasDataTableForObjs) {
             await this.db.schema.createTable(this.tableForObjs, function (table) {
                 table.string('table')
-                table.index(['table'], `${this.tableForObjs}_table_index`)
+                table.index(['table'], `${tableForObjs}_table_index`)
                 table.jsonb('object')
-                table.index(['object'], `${this.tableForObjs}_object_index`)
+                table.index(['object'], `${tableForObjs}_object_index`)
                 table.string('_message')
             })
         }
