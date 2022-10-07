@@ -64,3 +64,8 @@ The `rules.json` file for that examples:
   }
 ]
 ```
+
+Done! You already know how to create dynamic configurable bot.
+
+But your bot just store their state in memory, and probably you don't want to lose it after restart. 
+Check the next example to find a way to fix it!
