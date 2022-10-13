@@ -51,7 +51,7 @@
     "ensure-error": "^4.0.0",
     "esdk-obs-nodejs": "^3.21.6",
     "express": "^4.17.1",
-    "jira-client": "^6.22.0",
+    "jira-client": "^8.0.0",
     "js-yaml": "^4.1.0",
     "knex": "^2.3.0",
     "lodash": "^4.17.21",
