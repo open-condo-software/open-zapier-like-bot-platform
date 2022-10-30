@@ -55,7 +55,7 @@
     "js-yaml": "^4.1.0",
     "knex": "^2.3.0",
     "lodash": "^4.17.21",
-    "node-fetch": "2.x",
+    "node-fetch": "3.x",
     "node-schedule": "^2.1.0",
     "node-telegram-bot-api": "^0.56.0",
     "nodegit": "^0.27.0",
