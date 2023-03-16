@@ -22,7 +22,7 @@
     "supertest": "^6.2.2",
     "ts-jest": "27.1.2",
     "ts-node": "9.1.1",
-    "typescript": "4.5.4"
+    "typescript": "4.9.5"
   },
   "dependencies": {
     "@octokit/core": "^3.5.1",
